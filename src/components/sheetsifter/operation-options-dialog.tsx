@@ -21,15 +21,15 @@ export function OperationOptionsDialog({ isOpen, onOpenChange, onExecute, operat
   const handleExecute = () => {
     const options: ReportOptions = {};
     const numValue = parseFloat(filterValue);
-    if (operationId === 'compare-report-only' && !isNaN(numValue)) {
-      options.filterLessThan = numValue;
+    if ((operationId === 'compare-report-only' || operationId === 'compare-and-correct') && !isNaN(numValue)) {
+      options.filterGreaterThan = numValue;
     }
     onExecute(options);
     onOpenChange(false);
     setFilterValue('');
   };
 
-  const isFilterVisible = operationId === 'compare-report-only';
+  const isFilterVisible = operationId === 'compare-report-only' || operationId === 'compare-and-correct';
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -43,11 +43,11 @@ export function OperationOptionsDialog({ isOpen, onOpenChange, onExecute, operat
         {isFilterVisible && (
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="filter-less-than" className="col-span-4 text-left mb-2">
-                Incluir no relatório apenas linhas onde o valor da planilha principal é menor que:
+              <Label htmlFor="filter-greater-than" className="col-span-4 text-left mb-2">
+                Incluir no relatório/arquivo apenas linhas onde o valor da planilha principal é maior que:
               </Label>
               <Input
-                id="filter-less-than"
+                id="filter-greater-than"
                 type="number"
                 value={filterValue}
                 onChange={(e) => setFilterValue(e.target.value)}

@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, XCircle, Download, LoaderCircle } from 'lucide-react';
-import { compareAndCorrectAction } from '@/app/actions';
+import { compareAndCorrectAction, ReportOptions } from '@/app/actions';
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -20,9 +20,10 @@ interface ValidationResultsDialogProps {
   spreadsheetData: SpreadsheetData | null;
   selections: Selection[];
   primaryWorksheetName: string | null;
+  reportOptions: ReportOptions;
 }
 
-export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreadsheetData, selections, primaryWorksheetName }: ValidationResultsDialogProps) {
+export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreadsheetData, selections, primaryWorksheetName, reportOptions }: ValidationResultsDialogProps) {
   const { toast } = useToast();
   const [isDownloading, startDownloading] = useTransition();
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
@@ -40,6 +41,7 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
           selections,
           primaryWorksheetName,
           targetWorksheet,
+          reportOptions
         );
 
         if (correctedFiles.length > 0) {
@@ -52,7 +54,7 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
           document.body.removeChild(link);
           toast({ title: 'Download Iniciado', description: `O arquivo ${file.fileName} foi baixado.` });
         } else {
-          toast({ title: 'Nenhuma Correção Necessária', description: `A planilha ${targetWorksheet} já está correta.` });
+          toast({ title: 'Nenhuma Correção Necessária', description: `A planilha ${targetWorksheet} já está correta ou nenhuma linha atendeu aos critérios.` });
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro durante a correção.';
@@ -102,7 +104,7 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                     <div className="flex justify-between items-start mb-4 p-4 border rounded-lg bg-secondary/50">
                         <div className="text-sm space-y-1">
                           <p><strong>Planilha:</strong> {report.worksheetName}</p>
-                          <p><strong>Total de Linhas:</strong> {report.summary.totalRows}</p>
+                          <p><strong>Total de Linhas (no filtro):</strong> {report.summary.totalRows}</p>
                           <p className="font-semibold text-green-700"><strong>Correspondências Válidas:</strong> {report.summary.validRows}</p>
                           <p className="font-semibold text-red-700"><strong>Divergências:</strong> {report.summary.invalidRows}</p>
                         </div>
@@ -158,7 +160,7 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
           </Tabs>
         ) : (
           <div className="flex-grow flex items-center justify-center">
-            <p className="text-muted-foreground">Nenhum relatório de validação para exibir.</p>
+            <p className="text-muted-foreground">Nenhum relatório de validação para exibir (verifique os filtros aplicados).</p>
           </div>
         )}
       </DialogContent>

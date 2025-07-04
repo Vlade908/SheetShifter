@@ -9,7 +9,7 @@ export interface ValidationRequest {
 }
 
 export interface ReportOptions {
-    filterLessThan?: number;
+    filterGreaterThan?: number;
 }
 
 export interface ValidationResponse {
@@ -144,10 +144,10 @@ function runComparisonValidation(requests: ValidationRequest[], options: ReportO
         });
 
         const results = allResults.filter(row => {
-            if (options.filterLessThan !== undefined) {
+            if (options.filterGreaterThan !== undefined) {
                 if (row.sourceValue === undefined) return false;
-                const numericSourceValue = parseFloat(row.sourceValue);
-                return !isNaN(numericSourceValue) && numericSourceValue < options.filterLessThan;
+                const numericSourceValue = parseFloat(row.sourceValue.replace(/,/g, '.'));
+                return !isNaN(numericSourceValue) && numericSourceValue > options.filterGreaterThan;
             }
             return true;
         });
@@ -226,7 +226,8 @@ export async function compareAndCorrectAction(
   spreadsheetData: SpreadsheetData,
   selections: Selection[],
   primaryWorksheetName: string,
-  targetWorksheetName?: string
+  targetWorksheetName?: string,
+  options: ReportOptions = {}
 ): Promise<CorrectedFile[]> {
   const primarySelections = selections.filter(s => s.worksheetName === primaryWorksheetName);
   const primaryKeyCol = primarySelections.find(s => s.role === 'key');
@@ -272,26 +273,37 @@ export async function compareAndCorrectAction(
       console.warn(`Não foi possível encontrar as colunas Chave/Valor na planilha ${wsName}`);
       continue;
     }
-
-    const correctedData = JSON.parse(JSON.stringify(targetWorksheet.data));
+    
+    const originalData = targetWorksheet.data;
+    const correctedSheetData = [originalData[targetWorksheet.headerRow - 1]];
     let hasCorrections = false;
 
-    for (let i = targetWorksheet.headerRow; i < correctedData.length; i++) {
-      const row = correctedData[i];
+    for (let i = targetWorksheet.headerRow; i < originalData.length; i++) {
+      const row = originalData[i];
       const key = row[keyColIndex];
       const currentValue = row[valueColIndex];
 
       if (key && sourceMap.has(key)) {
-        const correctValue = sourceMap.get(key);
+        const correctValue = sourceMap.get(key)!;
+        
+        if (options.filterGreaterThan !== undefined) {
+          const numericSourceValue = parseFloat(correctValue.replace(/,/g, '.'));
+          if (isNaN(numericSourceValue) || numericSourceValue <= options.filterGreaterThan) {
+            continue; 
+          }
+        }
+
+        const correctedRow = [...row];
         if (currentValue !== correctValue) {
-          row[valueColIndex] = correctValue;
+          correctedRow[valueColIndex] = correctValue;
           hasCorrections = true;
         }
+        correctedSheetData.push(correctedRow);
       }
     }
 
-    if (hasCorrections) {
-      const newWs = XLSX.utils.aoa_to_sheet(correctedData);
+    if (correctedSheetData.length > 1) {
+      const newWs = XLSX.utils.aoa_to_sheet(correctedSheetData);
       const newWb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(newWb, newWs, wsName);
       

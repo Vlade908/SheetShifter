@@ -50,6 +50,8 @@ export default function OperationsPage() {
   const [isModalOpen, setModalOpen] = useState(false);
   const [isOptionsModalOpen, setOptionsModalOpen] = useState(false);
   const [detailedReports, setDetailedReports] = useState<DetailedReport[] | null>(null);
+  const [reportOptions, setReportOptions] = useState<ReportOptions>({});
+
 
   useEffect(() => {
     try {
@@ -85,6 +87,7 @@ export default function OperationsPage() {
   };
 
   const executeCompareReportOnly = (options: ReportOptions) => {
+    setReportOptions(options);
     startExecuting(async () => {
       const requests: ValidationRequest[] = Array.from(selections.entries()).map(
         ([key, selection]) => ({ key, selection })
@@ -130,7 +133,7 @@ export default function OperationsPage() {
     });
   };
   
-  const executeCompareAndCorrect = () => {
+  const executeCompareAndCorrect = (options: ReportOptions) => {
     if (!spreadsheetData || !primaryWorksheetName) {
         toast({
             variant: 'destructive',
@@ -145,7 +148,9 @@ export default function OperationsPage() {
             const correctedFiles = await compareAndCorrectAction(
                 spreadsheetData, 
                 Array.from(selections.values()), 
-                primaryWorksheetName
+                primaryWorksheetName,
+                undefined,
+                options
             );
             
             if (correctedFiles.length > 0) {
@@ -159,7 +164,7 @@ export default function OperationsPage() {
                 });
                 toast({ title: "Correção Completa", description: `${correctedFiles.length} planilha(s) foram corrigidas e baixadas.` });
             } else {
-                toast({ title: "Nenhuma Correção Necessária", description: "Todos os valores correspondentes já estavam corretos." });
+                toast({ title: "Nenhuma Correção Necessária", description: "Todos os valores correspondentes já estavam corretos ou nenhuma linha atendeu aos critérios de filtro." });
             }
 
         } catch (error) {
@@ -179,7 +184,7 @@ export default function OperationsPage() {
     if (selectedOperation === 'compare-report-only') {
       executeCompareReportOnly(options);
     } else if (selectedOperation === 'compare-and-correct') {
-      executeCompareAndCorrect();
+      executeCompareAndCorrect(options);
     }
   };
 
@@ -347,6 +352,7 @@ export default function OperationsPage() {
             spreadsheetData={spreadsheetData}
             selections={selectedArray}
             primaryWorksheetName={primaryWorksheetName}
+            reportOptions={reportOptions}
         />
          <OperationOptionsDialog
             isOpen={isOptionsModalOpen}
