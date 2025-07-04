@@ -8,6 +8,10 @@ export interface ValidationRequest {
   selection: Selection;
 }
 
+export interface ReportOptions {
+    filterLessThan?: number;
+}
+
 export interface ValidationResponse {
   key: string;
   isValid: boolean;
@@ -90,7 +94,7 @@ export async function validateSelectionsAction(
 }
 
 
-function runComparisonValidation(requests: ValidationRequest[]): DetailedReport[] {
+function runComparisonValidation(requests: ValidationRequest[], options: ReportOptions): DetailedReport[] {
     const selections = requests.map(r => r.selection);
     
     const selectionsByWorksheet = selections.reduce((acc, sel) => {
@@ -108,7 +112,6 @@ function runComparisonValidation(requests: ValidationRequest[]): DetailedReport[
         throw new Error("Para comparação, selecione colunas Chave e Valor em pelo menos duas planilhas.");
     }
 
-    // Usar o primeiro par como fonte de verdade
     const sourceWs = worksheetPairs[0];
     const sourceKeyCol = sourceWs.keys[0];
     const sourceValueCol = sourceWs.values[0];
@@ -122,21 +125,16 @@ function runComparisonValidation(requests: ValidationRequest[]): DetailedReport[
     
     const reports: DetailedReport[] = [];
     
-    // Comparar todos os outros pares com a fonte
     for (let i = 1; i < worksheetPairs.length; i++) {
         const targetWs = worksheetPairs[i];
         const targetKeyCol = targetWs.keys[0];
         const targetValueCol = targetWs.values[0];
 
-        let validRows = 0;
-        const results: DetailedValidationRow[] = targetValueCol.fullData.map((value, index) => {
+        const allResults = targetValueCol.fullData.map((value, index) => {
             const targetKey = targetKeyCol.fullData[index];
             const sourceValue = sourceMap.get(targetKey);
             const isValid = (targetKey && sourceValue !== undefined) ? sourceValue === value : false;
             
-            if (isValid) {
-                validRows++;
-            }
             return {
                 rowIndex: index,
                 value: value,
@@ -145,7 +143,17 @@ function runComparisonValidation(requests: ValidationRequest[]): DetailedReport[
             };
         });
 
-        const totalRows = targetValueCol.fullData.length;
+        const results = allResults.filter(row => {
+            if (options.filterLessThan !== undefined) {
+                if (row.sourceValue === undefined) return false;
+                const numericSourceValue = parseFloat(row.sourceValue);
+                return !isNaN(numericSourceValue) && numericSourceValue < options.filterLessThan;
+            }
+            return true;
+        });
+
+        const validRows = results.filter(r => r.isValid).length;
+        const totalRows = results.length;
         const invalidRows = totalRows - validRows;
 
         reports.push({
@@ -204,11 +212,12 @@ function runDataTypeValidation(requests: ValidationRequest[]): DetailedReport[] 
 }
 
 export async function getDetailedValidationReportAction(
-  requests: ValidationRequest[]
+  requests: ValidationRequest[],
+  options: ReportOptions = {}
 ): Promise<DetailedReport[]> {
     const hasRoles = requests.some(r => r.selection.role);
     if (hasRoles) {
-        return runComparisonValidation(requests);
+        return runComparisonValidation(requests, options);
     }
     return runDataTypeValidation(requests);
 }
@@ -216,7 +225,8 @@ export async function getDetailedValidationReportAction(
 export async function compareAndCorrectAction(
   spreadsheetData: SpreadsheetData,
   selections: Selection[],
-  primaryWorksheetName: string
+  primaryWorksheetName: string,
+  targetWorksheetName?: string
 ): Promise<CorrectedFile[]> {
   const primarySelections = selections.filter(s => s.worksheetName === primaryWorksheetName);
   const primaryKeyCol = primarySelections.find(s => s.role === 'key');
@@ -235,11 +245,14 @@ export async function compareAndCorrectAction(
   }
 
   const correctedFiles: CorrectedFile[] = [];
-  const secondaryWorksheetNames = [...new Set(
-    selections
-      .filter(s => s.worksheetName !== primaryWorksheetName && s.role)
-      .map(s => s.worksheetName)
-  )];
+  const secondaryWorksheetNames = targetWorksheetName
+    ? [targetWorksheetName]
+    : [...new Set(
+        selections
+          .filter(s => s.worksheetName !== primaryWorksheetName && s.role)
+          .map(s => s.worksheetName)
+      )];
+
 
   for (const wsName of secondaryWorksheetNames) {
     const targetWorksheet = spreadsheetData.worksheets.find(ws => ws.name === wsName);

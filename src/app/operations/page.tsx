@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import type { SelectionWithValidation, DetailedReport, SpreadsheetData } from '@/types';
+import type { SelectionWithValidation, DetailedReport, SpreadsheetData, Selection } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppLogo } from '@/components/icons';
@@ -14,8 +14,9 @@ import { DataTypeIcon } from '@/components/data-type-icon';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from "@/hooks/use-toast";
-import { getDetailedValidationReportAction, compareAndCorrectAction, type ValidationRequest } from '@/app/actions';
+import { getDetailedValidationReportAction, compareAndCorrectAction, type ValidationRequest, type ReportOptions } from '@/app/actions';
 import { ValidationResultsDialog } from '@/components/sheetsifter/validation-results-dialog';
+import { OperationOptionsDialog } from '@/components/sheetsifter/operation-options-dialog';
 
 const operations = [
   {
@@ -47,6 +48,7 @@ export default function OperationsPage() {
   const [selectedOperation, setSelectedOperation] = useState<string | null>(null);
   const [isExecuting, startExecuting] = useTransition();
   const [isModalOpen, setModalOpen] = useState(false);
+  const [isOptionsModalOpen, setOptionsModalOpen] = useState(false);
   const [detailedReports, setDetailedReports] = useState<DetailedReport[] | null>(null);
 
   useEffect(() => {
@@ -82,7 +84,7 @@ export default function OperationsPage() {
     router.push('/');
   };
 
-  const executeCompareReportOnly = () => {
+  const executeCompareReportOnly = (options: ReportOptions) => {
     startExecuting(async () => {
       const requests: ValidationRequest[] = Array.from(selections.entries()).map(
         ([key, selection]) => ({ key, selection })
@@ -94,22 +96,24 @@ export default function OperationsPage() {
       }
       
       try {
-        const reports = await getDetailedValidationReportAction(requests);
+        const reports = await getDetailedValidationReportAction(requests, options);
         setDetailedReports(reports);
         
         const newSelections = new Map(selections);
-        reports.forEach(report => {
-          const selection = newSelections.get(report.key);
-          if (selection) {
-            const isValid = report.summary.invalidRows === 0;
-            const reason = isValid 
-              ? `Todos os valores correspondentes são idênticos para '${report.columnName}'.`
-              : `${report.summary.invalidRows} de ${report.summary.totalRows} valores são divergentes.`;
+        if (reports.length > 0) {
+            reports.forEach(report => {
+                const selection = newSelections.get(report.key);
+                if (selection) {
+                    const isValid = report.summary.invalidRows === 0;
+                    const reason = isValid 
+                    ? `Todos os valores correspondentes são idênticos para '${report.columnName}'.`
+                    : `${report.summary.invalidRows} de ${report.summary.totalRows} valores são divergentes.`;
 
-            selection.validationResult = { isValid, reason };
-            newSelections.set(report.key, selection);
-          }
-        });
+                    selection.validationResult = { isValid, reason };
+                    newSelections.set(report.key, selection);
+                }
+            });
+        }
         setSelections(newSelections);
         sessionStorage.setItem('selections', JSON.stringify(Array.from(newSelections.entries())));
 
@@ -169,6 +173,17 @@ export default function OperationsPage() {
     });
   };
 
+  const executeOperationWithOptions = (options: ReportOptions) => {
+    if (!selectedOperation) return;
+
+    if (selectedOperation === 'compare-report-only') {
+      executeCompareReportOnly(options);
+    } else if (selectedOperation === 'compare-and-correct') {
+      executeCompareAndCorrect();
+    }
+  };
+
+
   const handleExecuteOperation = () => {
     if (!selectedOperation) return;
 
@@ -202,7 +217,6 @@ export default function OperationsPage() {
           });
           return;
       }
-      executeCompareReportOnly();
     }
     
     if (selectedOperation === 'compare-and-correct') {
@@ -210,8 +224,9 @@ export default function OperationsPage() {
         toast({ variant: 'destructive', title: 'Nenhuma Planilha Principal', description: 'Por favor, volte e marque uma planilha como principal (usando a estrela) para usar como fonte da verdade.' });
         return;
       }
-      executeCompareAndCorrect();
     }
+
+    setOptionsModalOpen(true);
   };
 
   const selectedArray = Array.from(selections.values());
@@ -329,6 +344,15 @@ export default function OperationsPage() {
             isOpen={isModalOpen} 
             onOpenChange={setModalOpen} 
             reports={detailedReports} 
+            spreadsheetData={spreadsheetData}
+            selections={selectedArray}
+            primaryWorksheetName={primaryWorksheetName}
+        />
+         <OperationOptionsDialog
+            isOpen={isOptionsModalOpen}
+            onOpenChange={setOptionsModalOpen}
+            onExecute={executeOperationWithOptions}
+            operationId={selectedOperation}
         />
       </div>
     </TooltipProvider>
