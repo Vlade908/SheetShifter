@@ -76,43 +76,47 @@ export default function SheetSifterApp() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setIsProcessingFile(true);
+    setIsProcessingFile(true); // Set loading state immediately
+
     const reader = new FileReader();
     reader.onload = (e) => {
-        try {
-            const data = e.target?.result;
-            const workbook = XLSX.read(data, { type: 'array' });
-            const defaultHeaderRow = 2;
+        // Defer the heavy processing to allow the UI to update
+        setTimeout(() => {
+            try {
+                const data = e.target?.result;
+                const workbook = XLSX.read(data, { type: 'array' });
+                const defaultHeaderRow = 2;
 
-            const worksheets: Worksheet[] = workbook.SheetNames.map(sheetName => {
-                const worksheet = workbook.Sheets[sheetName];
-                const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                
-                return { 
-                  name: sheetName, 
-                  columns: extractColumns(jsonData, defaultHeaderRow),
-                  data: jsonData,
-                  headerRow: defaultHeaderRow,
-                };
-            });
+                const worksheets: Worksheet[] = workbook.SheetNames.map(sheetName => {
+                    const worksheet = workbook.Sheets[sheetName];
+                    const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    
+                    return { 
+                      name: sheetName, 
+                      columns: extractColumns(jsonData, defaultHeaderRow),
+                      data: jsonData,
+                      headerRow: defaultHeaderRow,
+                    };
+                });
 
-            setSpreadsheetData({
-                fileName: file.name,
-                worksheets,
-            });
-            setPrimaryWorksheetName(worksheets.length > 0 ? worksheets[0].name : null);
-            setStep("selection");
+                setSpreadsheetData({
+                    fileName: file.name,
+                    worksheets,
+                });
+                setPrimaryWorksheetName(worksheets.length > 0 ? worksheets[0].name : null);
+                setStep("selection");
 
-        } catch (error) {
-            console.error("Error processing file:", error);
-            toast({
-                variant: "destructive",
-                title: "Erro ao Processar Arquivo",
-                description: "Ocorreu um problema ao analisar sua planilha. Por favor, verifique o formato do arquivo.",
-            });
-        } finally {
-            setIsProcessingFile(false);
-        }
+            } catch (error) {
+                console.error("Error processing file:", error);
+                toast({
+                    variant: "destructive",
+                    title: "Erro ao Processar Arquivo",
+                    description: "Ocorreu um problema ao analisar sua planilha. Por favor, verifique o formato do arquivo.",
+                });
+            } finally {
+                setIsProcessingFile(false);
+            }
+        }, 0);
     };
     reader.onerror = () => {
       toast({
@@ -312,6 +316,7 @@ export default function SheetSifterApp() {
                           onChange={handleFileChange}
                           className="hidden"
                           accept=".xlsx,.xls,.ods,.csv"
+                          disabled={isProcessingFile}
                       />
                       <Button size="lg" onClick={handleUploadClick} disabled={isProcessingFile}>
                           {isProcessingFile ? (
