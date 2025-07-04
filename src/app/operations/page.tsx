@@ -104,6 +104,7 @@ export default function OperationsPage() {
       toast({ variant: 'destructive', title: 'Nenhuma Planilha Principal', description: 'Volte e marque uma planilha como principal.' });
       return;
     }
+    setReportOptions(options); // Set options to be passed to the dialog
     startExecuting(async () => {
       const requests: ValidationRequest[] = Array.from(selections.entries()).map(
         ([key, selection]) => ({ key, selection })
