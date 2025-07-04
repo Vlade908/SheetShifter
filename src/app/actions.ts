@@ -1,6 +1,7 @@
 'use server';
 
-import type { Selection, DataType, DetailedReport, DetailedValidationRow } from '@/types';
+import type { Selection, DataType, DetailedReport, DetailedValidationRow, SpreadsheetData } from '@/types';
+import * as XLSX from 'xlsx';
 
 export interface ValidationRequest {
   key: string;
@@ -11,6 +12,11 @@ export interface ValidationResponse {
   key: string;
   isValid: boolean;
   reason: string;
+}
+
+export interface CorrectedFile {
+    fileName: string;
+    content: string; // base64 encoded
 }
 
 function validateSample(sample: string, dataType: DataType): boolean {
@@ -203,4 +209,85 @@ export async function getDetailedValidationReportAction(
         return runComparisonValidation(requests);
     }
     return runDataTypeValidation(requests);
+}
+
+export async function compareAndCorrectAction(
+  spreadsheetData: SpreadsheetData,
+  selections: Selection[],
+  primaryWorksheetName: string
+): Promise<CorrectedFile[]> {
+  const primarySelections = selections.filter(s => s.worksheetName === primaryWorksheetName);
+  const primaryKeyCol = primarySelections.find(s => s.role === 'key');
+  const primaryValueCol = primarySelections.find(s => s.role === 'value');
+
+  if (!primaryKeyCol || !primaryValueCol) {
+    throw new Error(`A planilha principal '${primaryWorksheetName}' deve ter uma coluna Chave e uma Valor selecionadas.`);
+  }
+
+  const sourceMap = new Map<string, string>();
+  for (let i = 0; i < primaryKeyCol.fullData.length; i++) {
+    const key = primaryKeyCol.fullData[i];
+    if (key) {
+      sourceMap.set(key, primaryValueCol.fullData[i]);
+    }
+  }
+
+  const correctedFiles: CorrectedFile[] = [];
+  const secondaryWorksheetNames = [...new Set(
+    selections
+      .filter(s => s.worksheetName !== primaryWorksheetName && s.role)
+      .map(s => s.worksheetName)
+  )];
+
+  for (const wsName of secondaryWorksheetNames) {
+    const targetWorksheet = spreadsheetData.worksheets.find(ws => ws.name === wsName);
+    if (!targetWorksheet) continue;
+
+    const targetSelections = selections.filter(s => s.worksheetName === wsName);
+    const targetKeyCol = targetSelections.find(s => s.role === 'key');
+    const targetValueCol = targetSelections.find(s => s.role === 'value');
+
+    if (!targetKeyCol || !targetValueCol) continue;
+
+    const headerRowArray = targetWorksheet.data[targetWorksheet.headerRow - 1] as string[];
+    const keyColIndex = headerRowArray.findIndex(h => h === targetKeyCol.columnName);
+    const valueColIndex = headerRowArray.findIndex(h => h === targetValueCol.columnName);
+
+    if (keyColIndex === -1 || valueColIndex === -1) {
+      console.warn(`Não foi possível encontrar as colunas Chave/Valor na planilha ${wsName}`);
+      continue;
+    }
+
+    const correctedData = JSON.parse(JSON.stringify(targetWorksheet.data));
+    let hasCorrections = false;
+
+    for (let i = targetWorksheet.headerRow; i < correctedData.length; i++) {
+      const row = correctedData[i];
+      const key = row[keyColIndex];
+      const currentValue = row[valueColIndex];
+
+      if (key && sourceMap.has(key)) {
+        const correctValue = sourceMap.get(key);
+        if (currentValue !== correctValue) {
+          row[valueColIndex] = correctValue;
+          hasCorrections = true;
+        }
+      }
+    }
+
+    if (hasCorrections) {
+      const newWs = XLSX.utils.aoa_to_sheet(correctedData);
+      const newWb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(newWb, newWs, wsName);
+      
+      const fileContent = XLSX.write(newWb, { bookType: 'xlsx', type: 'base64' });
+      
+      correctedFiles.push({
+        fileName: `${spreadsheetData.fileName.replace(/\.[^/.]+$/, "")}_${wsName}_corrigido.xlsx`,
+        content: fileContent
+      });
+    }
+  }
+
+  return correctedFiles;
 }

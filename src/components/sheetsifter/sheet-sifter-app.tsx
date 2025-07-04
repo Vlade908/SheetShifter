@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx';
 import type { DataType, SelectionWithValidation, SpreadsheetData, Worksheet, Column } from "@/types";
 import { validateSelectionsAction, type ValidationRequest } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,7 @@ import { Separator } from "@/components/ui/separator";
 
 import { AppLogo } from "@/components/icons";
 import { DataTypeIcon } from "@/components/data-type-icon";
-import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search, KeyRound, TextSelect } from "lucide-react";
+import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search, KeyRound, TextSelect, Star } from "lucide-react";
 
 const dataTypes: DataType[] = ['text', 'number', 'date', 'currency'];
 
@@ -62,6 +63,7 @@ function extractColumns(data: any[][], headerRow: number): Column[] {
 export default function SheetSifterApp() {
   const [step, setStep] = useState<"upload" | "selection">("upload");
   const [spreadsheetData, setSpreadsheetData] = useState<SpreadsheetData | null>(null);
+  const [primaryWorksheetName, setPrimaryWorksheetName] = useState<string | null>(null);
   const [selections, setSelections] = useState<Map<string, SelectionWithValidation>>(new Map());
   const [searchTerm, setSearchTerm] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -96,6 +98,7 @@ export default function SheetSifterApp() {
                 fileName: file.name,
                 worksheets,
             });
+            setPrimaryWorksheetName(worksheets.length > 0 ? worksheets[0].name : null);
             setStep("selection");
 
         } catch (error) {
@@ -129,7 +132,10 @@ export default function SheetSifterApp() {
     setStep("upload");
     setSpreadsheetData(null);
     setSelections(new Map());
+    setPrimaryWorksheetName(null);
     sessionStorage.removeItem('selections');
+    sessionStorage.removeItem('spreadsheetData');
+    sessionStorage.removeItem('primaryWorksheetName');
   };
 
   const handleHeaderRowChange = (worksheetName: string, newHeaderRow: number) => {
@@ -206,6 +212,17 @@ export default function SheetSifterApp() {
       });
       return;
     }
+    
+    const hasRoles = Array.from(selections.values()).some(s => s.role);
+    if(hasRoles && !primaryWorksheetName) {
+      toast({
+        variant: "destructive",
+        title: "Nenhuma Planilha Principal",
+        description: "Se você definiu papéis (Chave/Valor), por favor, marque uma planilha como principal (usando a estrela) para usar como fonte da verdade.",
+      });
+      return;
+    }
+
 
     startTransition(async () => {
       const selectionsToValidate = new Map(selections);
@@ -236,6 +253,10 @@ export default function SheetSifterApp() {
         
         const selectionsToStore = Array.from(validatedSelections.entries());
         sessionStorage.setItem('selections', JSON.stringify(selectionsToStore));
+        sessionStorage.setItem('spreadsheetData', JSON.stringify(spreadsheetData));
+        if(primaryWorksheetName) {
+          sessionStorage.setItem('primaryWorksheetName', primaryWorksheetName);
+        }
         router.push('/operations');
 
       } catch (error) {
@@ -317,12 +338,28 @@ export default function SheetSifterApp() {
                       {spreadsheetData?.worksheets.map((worksheet) => {
                         const hasSelections = Array.from(selections.keys()).some(k => k.startsWith(`${worksheet.name}-`));
                         return(
-                        <TabsTrigger value={worksheet.name} key={worksheet.name} className="relative">
+                        <TabsTrigger value={worksheet.name} key={worksheet.name} className="relative pr-10">
                           <Sheet className="mr-2 h-4 w-4" />
                           {worksheet.name}
                           {hasSelections && (
                             <span className="ml-2 h-2 w-2 rounded-full bg-primary" />
                           )}
+                           <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setPrimaryWorksheetName(worksheet.name);
+                                    }}
+                                    className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-muted"
+                                >
+                                    <Star className={cn("h-4 w-4 text-gray-400", primaryWorksheetName === worksheet.name && "fill-yellow-400 text-yellow-500")} />
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Marcar como planilha principal</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </TabsTrigger>
                       )})}
                     </TabsList>

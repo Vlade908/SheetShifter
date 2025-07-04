@@ -3,18 +3,18 @@
 
 import React, { useState, useEffect, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import type { SelectionWithValidation, DetailedReport } from '@/types';
+import type { SelectionWithValidation, DetailedReport, SpreadsheetData } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppLogo } from '@/components/icons';
-import { ArrowLeft, Search, LoaderCircle, ClipboardCheck, CheckCircle2, XCircle } from 'lucide-react';
+import { ArrowLeft, Search, LoaderCircle, ClipboardCheck, CheckCircle2, XCircle, FilePenLine } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { DataTypeIcon } from '@/components/data-type-icon';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from "@/hooks/use-toast";
-import { getDetailedValidationReportAction, type ValidationRequest } from '@/app/actions';
+import { getDetailedValidationReportAction, compareAndCorrectAction, type ValidationRequest } from '@/app/actions';
 import { ValidationResultsDialog } from '@/components/sheetsifter/validation-results-dialog';
 
 const operations = [
@@ -25,10 +25,16 @@ const operations = [
     icon: Search,
   },
   {
-    id: 'check-values',
-    title: 'Verificar Valores',
-    description: 'Use colunas "Chave" para encontrar correspondências e compare os dados em colunas "Valor".',
+    id: 'compare-report-only',
+    title: 'Comparar Valores (Apenas Relatório)',
+    description: 'Use colunas "Chave" para encontrar correspondências e compare os dados em colunas "Valor". Exibe um relatório detalhado.',
     icon: ClipboardCheck,
+  },
+  {
+    id: 'compare-and-correct',
+    title: 'Comparar e Corrigir (Baixar Arquivo)',
+    description: 'Use uma planilha principal como fonte da verdade. Corrija os valores em outras planilhas e baixe os arquivos corrigidos.',
+    icon: FilePenLine,
   },
 ];
 
@@ -36,6 +42,8 @@ export default function OperationsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [selections, setSelections] = useState<Map<string, SelectionWithValidation>>(new Map());
+  const [spreadsheetData, setSpreadsheetData] = useState<SpreadsheetData | null>(null);
+  const [primaryWorksheetName, setPrimaryWorksheetName] = useState<string | null>(null);
   const [selectedOperation, setSelectedOperation] = useState<string | null>(null);
   const [isExecuting, startExecuting] = useTransition();
   const [isModalOpen, setModalOpen] = useState(false);
@@ -44,21 +52,121 @@ export default function OperationsPage() {
   useEffect(() => {
     try {
       const storedSelections = sessionStorage.getItem('selections');
+      const storedSpreadsheetData = sessionStorage.getItem('spreadsheetData');
+      const storedPrimaryWorksheet = sessionStorage.getItem('primaryWorksheetName');
+
       if (storedSelections) {
         const parsedSelections: [string, SelectionWithValidation][] = JSON.parse(storedSelections);
         setSelections(new Map(parsedSelections));
       } else {
         router.push('/');
       }
+
+      if (storedSpreadsheetData) {
+        setSpreadsheetData(JSON.parse(storedSpreadsheetData));
+      }
+      if (storedPrimaryWorksheet) {
+        setPrimaryWorksheetName(storedPrimaryWorksheet);
+      }
+
     } catch (error) {
-      console.error("Failed to parse selections from sessionStorage", error);
+      console.error("Failed to parse data from sessionStorage", error);
       router.push('/');
     }
   }, [router]);
 
   const handleStartOver = () => {
     sessionStorage.removeItem('selections');
+    sessionStorage.removeItem('spreadsheetData');
+    sessionStorage.removeItem('primaryWorksheetName');
     router.push('/');
+  };
+
+  const executeCompareReportOnly = () => {
+    startExecuting(async () => {
+      const requests: ValidationRequest[] = Array.from(selections.entries()).map(
+        ([key, selection]) => ({ key, selection })
+      );
+
+      if (requests.length === 0) {
+        toast({ variant: 'destructive', title: 'Nenhuma coluna para verificar.' });
+        return;
+      }
+      
+      try {
+        const reports = await getDetailedValidationReportAction(requests);
+        setDetailedReports(reports);
+        
+        const newSelections = new Map(selections);
+        reports.forEach(report => {
+          const selection = newSelections.get(report.key);
+          if (selection) {
+            const isValid = report.summary.invalidRows === 0;
+            const reason = isValid 
+              ? `Todos os valores correspondentes são idênticos para '${report.columnName}'.`
+              : `${report.summary.invalidRows} de ${report.summary.totalRows} valores são divergentes.`;
+
+            selection.validationResult = { isValid, reason };
+            newSelections.set(report.key, selection);
+          }
+        });
+        setSelections(newSelections);
+        sessionStorage.setItem('selections', JSON.stringify(Array.from(newSelections.entries())));
+
+        setModalOpen(true);
+
+      } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro ao verificar os valores.';
+          toast({
+            variant: 'destructive',
+            title: 'Erro na Verificação',
+            description: errorMessage,
+          });
+      }
+    });
+  };
+  
+  const executeCompareAndCorrect = () => {
+    if (!spreadsheetData || !primaryWorksheetName) {
+        toast({
+            variant: 'destructive',
+            title: 'Configuração Incompleta',
+            description: 'Dados da planilha ou planilha principal não encontrados. Por favor, comece de novo.',
+        });
+        return;
+    }
+
+    startExecuting(async () => {
+        try {
+            const correctedFiles = await compareAndCorrectAction(
+                spreadsheetData, 
+                Array.from(selections.values()), 
+                primaryWorksheetName
+            );
+            
+            if (correctedFiles.length > 0) {
+                correctedFiles.forEach(file => {
+                    const link = document.createElement('a');
+                    link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${file.content}`;
+                    link.download = file.fileName;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                });
+                toast({ title: "Correção Completa", description: `${correctedFiles.length} planilha(s) foram corrigidas e baixadas.` });
+            } else {
+                toast({ title: "Nenhuma Correção Necessária", description: "Todos os valores correspondentes já estavam corretos." });
+            }
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro durante a correção.';
+            toast({
+                variant: 'destructive',
+                title: 'Erro na Correção',
+                description: errorMessage,
+            });
+        }
+    });
   };
 
   const handleExecuteOperation = () => {
@@ -72,11 +180,20 @@ export default function OperationsPage() {
       return;
     }
 
-    if (selectedOperation === 'check-values') {
-      const allSelections = Array.from(selections.values());
-      const keys = allSelections.filter(s => s.role === 'key');
-      const values = allSelections.filter(s => s.role === 'value');
+    const allSelections = Array.from(selections.values());
+    const keys = allSelections.filter(s => s.role === 'key');
+    const values = allSelections.filter(s => s.role === 'value');
 
+    if (keys.length < 1 || values.length < 1) {
+        toast({
+            variant: 'destructive',
+            title: 'Seleção Incompleta',
+            description: 'Para comparar, selecione pelo menos uma coluna "Chave" e uma "Valor".',
+        });
+        return;
+    }
+    
+    if (selectedOperation === 'compare-report-only') {
       if (keys.length < 2 || values.length < 2) {
           toast({
               variant: 'destructive',
@@ -85,48 +202,15 @@ export default function OperationsPage() {
           });
           return;
       }
-
-      startExecuting(async () => {
-        const requests: ValidationRequest[] = Array.from(selections.entries()).map(
-          ([key, selection]) => ({ key, selection })
-        );
-
-        if (requests.length === 0) {
-          toast({ variant: 'destructive', title: 'Nenhuma coluna para verificar.' });
-          return;
-        }
-        
-        try {
-          const reports = await getDetailedValidationReportAction(requests);
-          setDetailedReports(reports);
-          
-          const newSelections = new Map(selections);
-          reports.forEach(report => {
-            const selection = newSelections.get(report.key);
-            if (selection) {
-              const isValid = report.summary.invalidRows === 0;
-              const reason = isValid 
-                ? `Todos os valores correspondentes são idênticos para '${report.columnName}'.`
-                : `${report.summary.invalidRows} de ${report.summary.totalRows} valores são divergentes.`;
-
-              selection.validationResult = { isValid, reason };
-              newSelections.set(report.key, selection);
-            }
-          });
-          setSelections(newSelections);
-          sessionStorage.setItem('selections', JSON.stringify(Array.from(newSelections.entries())));
-
-          setModalOpen(true);
-
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro ao verificar os valores.';
-            toast({
-              variant: 'destructive',
-              title: 'Erro na Verificação',
-              description: errorMessage,
-            });
-        }
-      });
+      executeCompareReportOnly();
+    }
+    
+    if (selectedOperation === 'compare-and-correct') {
+      if (!primaryWorksheetName) {
+        toast({ variant: 'destructive', title: 'Nenhuma Planilha Principal', description: 'Por favor, volte e marque uma planilha como principal (usando a estrela) para usar como fonte da verdade.' });
+        return;
+      }
+      executeCompareAndCorrect();
     }
   };
 
