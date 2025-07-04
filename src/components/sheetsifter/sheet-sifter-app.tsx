@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
+import * as XLSX from 'xlsx';
 import type { DataType, SelectionWithValidation, SpreadsheetData, Worksheet, Column } from "@/types";
 import { validateSelectionsAction, type ValidationRequest } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
@@ -16,41 +17,6 @@ import { AppLogo } from "@/components/icons";
 import { DataTypeIcon } from "@/components/data-type-icon";
 import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, AlertCircle, RefreshCw } from "lucide-react";
 
-// Mock Data
-const mockSpreadsheetData: SpreadsheetData = {
-  fileName: "Q3_Financials.xlsx",
-  worksheets: [
-    {
-      name: "Sales-Data",
-      columns: [
-        { name: "OrderID", sampleData: ["78921", "78922", "78923"] },
-        { name: "Product", sampleData: ["Widget A", "Widget B", "Widget C"] },
-        { name: "SaleDate", sampleData: ["2023-07-15", "2023-07-16", "2023-07-17"] },
-        { name: "Amount", sampleData: ["$1,200.50", "$750.00", "$2,500.75"] },
-        { name: "Quantity", sampleData: ["10", "5", "15"] },
-      ],
-    },
-    {
-      name: "Employee-Hours",
-      columns: [
-        { name: "EmployeeID", sampleData: ["E101", "E102", "E103"] },
-        { name: "WeekEnding", sampleData: ["07/21/2023", "07/21/2023", "07/21/2023"] },
-        { name: "HoursWorked", sampleData: ["40", "38.5", "42"] },
-        { name: "Notes", sampleData: ["Overtime approved", "", "Client meeting"] },
-      ],
-    },
-    {
-        name: "Inventory-Levels",
-        columns: [
-          { name: "SKU", sampleData: ["WID-A-01", "WID-B-01", "WID-C-01"] },
-          { name: "Stock", sampleData: ["150", "200", "75"] },
-          { name: "LastRestock", sampleData: ["July 5, 2023", "2023/07/10", "7/12/23"] },
-          { name: "Value", sampleData: ["15000", "10000.00", "18750.00"] },
-        ],
-      },
-  ],
-};
-
 const dataTypes: DataType[] = ['text', 'number', 'date', 'currency'];
 
 export default function SheetSifterApp() {
@@ -59,10 +25,71 @@ export default function SheetSifterApp() {
   const [selections, setSelections] = useState<Map<string, SelectionWithValidation>>(new Map());
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = () => {
-    setSpreadsheetData(mockSpreadsheetData);
-    setStep("selection");
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = e.target?.result;
+            const workbook = XLSX.read(data, { type: 'array' });
+
+            const worksheets: Worksheet[] = workbook.SheetNames.map(sheetName => {
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                
+                if (jsonData.length === 0) {
+                    return { name: sheetName, columns: [] };
+                }
+
+                const headers = jsonData[0] as string[];
+                const columns: Column[] = headers.map((header, index) => {
+                    // Get up to 3 sample data rows
+                    const sampleData = jsonData.slice(1, 4).map(row => row[index] !== undefined && row[index] !== null ? String(row[index]) : "").filter(val => val !== "");
+                    return {
+                        name: String(header),
+                        sampleData,
+                    };
+                }).filter(column => column.name); // Filter out empty header columns
+
+                return { name: sheetName, columns };
+            });
+
+            setSpreadsheetData({
+                fileName: file.name,
+                worksheets,
+            });
+            setStep("selection");
+
+        } catch (error) {
+            console.error("Error processing file:", error);
+            toast({
+                variant: "destructive",
+                title: "Error Processing File",
+                description: "There was an issue parsing your spreadsheet. Please check the file format.",
+            });
+        }
+    };
+    reader.onerror = () => {
+      toast({
+          variant: "destructive",
+          title: "File Read Error",
+          description: "Could not read the selected file.",
+      });
+    }
+    reader.readAsArrayBuffer(file);
+    
+    // Reset file input value to allow re-uploading the same file
+    if(event.target) {
+      event.target.value = '';
+    }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
   };
 
   const handleStartOver = () => {
@@ -173,13 +200,19 @@ export default function SheetSifterApp() {
                           <UploadCloud className="h-12 w-12 text-primary" />
                       </div>
                       <CardTitle className="font-headline text-3xl">Upload Your Spreadsheet</CardTitle>
-                      <CardDescription className="text-base">Upload an .xls or .ods file to begin selecting and validating your data.</CardDescription>
+                      <CardDescription className="text-base">Upload an .xls, .xlsx, .ods or .csv file to begin selecting and validating your data.</CardDescription>
                   </CardHeader>
                   <CardContent>
-                      <Button size="lg" onClick={handleFileUpload}>
+                      <input
+                          type="file"
+                          ref={fileInputRef}
+                          onChange={handleFileChange}
+                          className="hidden"
+                          accept=".xlsx,.xls,.ods,.csv"
+                      />
+                      <Button size="lg" onClick={handleUploadClick}>
                           Select File to Upload
                       </Button>
-                      <p className="text-xs text-muted-foreground mt-4">(For this demo, a sample file will be used)</p>
                   </CardContent>
               </Card>
           </div>
