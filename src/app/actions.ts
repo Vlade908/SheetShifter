@@ -440,3 +440,104 @@ export async function generatePaymentSheetAction(
     content: fileContent,
   };
 }
+
+
+export async function updatePaymentSheetAction(
+  selections: Selection[],
+  primaryWorksheetName: string,
+  existingSheetBase64: string,
+  existingSheetFileName: string,
+): Promise<CorrectedFile> {
+  // 1. Parse main sheet data
+  const primarySelections = selections.filter(s => s.worksheetName === primaryWorksheetName);
+  const nomeCol = primarySelections.find(s => s.role === 'key');
+  const cpfCol = primarySelections.find(s => s.role === 'cpf');
+  const valorCol = primarySelections.find(s => s.role === 'value');
+
+  if (!nomeCol || !cpfCol || !valorCol) {
+    throw new Error('As colunas "Nome (Chave)", "CPF" e "Valor" devem ser selecionadas na planilha principal.');
+  }
+
+  const sourcePayments = new Map<string, { cpf: string, value: number }>();
+  for (let i = 0; i < nomeCol.fullData.length; i++) {
+    const valorNum = parseCurrency(valorCol.fullData[i]);
+    if (!isNaN(valorNum) && valorNum > 0) {
+      const nome = nomeCol.fullData[i];
+      const cpf = cpfCol.fullData[i];
+      if (nome) {
+        sourcePayments.set(nome, { cpf, value: valorNum });
+      }
+    }
+  }
+
+  // 2. Parse existing payment sheet
+  const workbook = XLSX.read(Buffer.from(existingSheetBase64, 'base64'), { type: 'buffer' });
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  const existingData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+  
+  if (existingData.length === 0) {
+    throw new Error('A planilha de pagamento existente está vazia.');
+  }
+
+  const header = existingData[0].map(h => String(h).toLowerCase());
+  const nameIndex = header.indexOf('nome');
+  
+  if(nameIndex === -1) {
+    throw new Error('A planilha de pagamento existente deve conter uma coluna "Nome".');
+  }
+
+  const existingNames = new Set<string>();
+  for (let i = 1; i < existingData.length; i++) {
+      const name = existingData[i][nameIndex];
+      if (name) {
+          existingNames.add(String(name));
+      }
+  }
+
+  // 3. Find new entries
+  const newRows: (string | number)[][] = [];
+  sourcePayments.forEach((data, name) => {
+    if (!existingNames.has(name)) {
+      newRows.push([name, data.cpf, data.value]);
+    }
+  });
+
+  // 4. Check for updates
+  if (newRows.length === 0) {
+    throw new Error('Nenhuma atualização necessária. Todos os nomes já estão na planilha de pagamento.');
+  }
+
+  // 5. Create new file content
+  const updatedData = [...existingData, ...newRows];
+  
+  const newWs = XLSX.utils.aoa_to_sheet(updatedData);
+
+  // Apply currency format
+  const currencyFormat = 'R$ #,##0.00';
+  const valorHeader = String(updatedData[0].find(h => String(h).toLowerCase() === 'valor')).toLowerCase();
+  const valueColIndex = updatedData[0].map(h => String(h).toLowerCase()).indexOf(valorHeader);
+
+  if(valueColIndex > -1) {
+    Object.keys(newWs).forEach(cellAddress => {
+        const cell = XLSX.utils.decode_cell(cellAddress);
+        if (cell.c === valueColIndex && cell.r > 0) {
+            if (newWs[cellAddress]?.v !== undefined) {
+                newWs[cellAddress].t = 'n';
+                newWs[cellAddress].z = currencyFormat;
+            }
+        }
+    });
+  }
+
+  const newWb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(newWb, newWs, sheetName || 'Pagamento Atualizado');
+
+  const newFileName = `${existingSheetFileName.replace(/\.[^/.]+$/, "")}_atualizada.xlsx`;
+  const fileContent = XLSX.write(newWb, { bookType: 'xlsx', type: 'base64' });
+
+  return {
+    fileName: newFileName,
+    content: fileContent,
+  };
+}

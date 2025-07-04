@@ -1,20 +1,20 @@
 
 'use client';
 
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useEffect, useTransition, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { SelectionWithValidation, DetailedReport, SpreadsheetData, Selection } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppLogo } from '@/components/icons';
-import { ArrowLeft, Search, LoaderCircle, ClipboardCheck, CheckCircle2, XCircle, FilePenLine, FileSpreadsheet } from 'lucide-react';
+import { ArrowLeft, Search, LoaderCircle, ClipboardCheck, CheckCircle2, XCircle, FilePenLine, FileSpreadsheet, ListChecks, Upload } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { DataTypeIcon } from '@/components/data-type-icon';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from "@/hooks/use-toast";
-import { getDetailedValidationReportAction, compareAndCorrectAction, generatePaymentSheetAction, type ValidationRequest, type ReportOptions } from '@/app/actions';
+import { getDetailedValidationReportAction, compareAndCorrectAction, generatePaymentSheetAction, updatePaymentSheetAction, type ValidationRequest, type ReportOptions } from '@/app/actions';
 import { ValidationResultsDialog } from '@/components/sheetsifter/validation-results-dialog';
 import { OperationOptionsDialog } from '@/components/sheetsifter/operation-options-dialog';
 
@@ -43,6 +43,12 @@ const operations = [
     description: 'Gera uma nova planilha (Nome, CPF, Valor) com base nos valores da planilha principal.',
     icon: FileSpreadsheet,
   },
+  {
+    id: 'update-payment-sheet',
+    title: 'Verificar e Atualizar Planilha de Pagamento',
+    description: 'Envie uma planilha de pagamento existente para adicionar novas pessoas da planilha principal.',
+    icon: ListChecks,
+  },
 ];
 
 export default function OperationsPage() {
@@ -57,6 +63,8 @@ export default function OperationsPage() {
   const [isOptionsModalOpen, setOptionsModalOpen] = useState(false);
   const [detailedReports, setDetailedReports] = useState<DetailedReport[] | null>(null);
   const [reportOptions, setReportOptions] = useState<ReportOptions>({});
+  const [existingPaymentFile, setExistingPaymentFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
 
   useEffect(() => {
@@ -236,6 +244,57 @@ export default function OperationsPage() {
     });
   };
 
+  const executeUpdatePaymentSheet = () => {
+    if (!primaryWorksheetName) {
+        toast({ variant: 'destructive', title: 'Nenhuma Planilha Principal', description: 'Por favor, marque uma planilha como principal.' });
+        return;
+    }
+    if (!existingPaymentFile) {
+        toast({ variant: 'destructive', title: 'Nenhum Arquivo Enviado', description: 'Por favor, envie a planilha de pagamento existente.' });
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.readAsDataURL(existingPaymentFile);
+    reader.onload = () => {
+        startExecuting(async () => {
+            try {
+                const base64Content = (reader.result as string).split(',')[1];
+                const updatedFile = await updatePaymentSheetAction(
+                    Array.from(selections.values()),
+                    primaryWorksheetName,
+                    base64Content,
+                    existingPaymentFile.name
+                );
+
+                const link = document.createElement('a');
+                link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${updatedFile.content}`;
+                link.download = updatedFile.fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                toast({ title: "Planilha Atualizada", description: `A planilha "${updatedFile.fileName}" foi baixada com as novas entradas.` });
+
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro durante a atualização.';
+                toast({
+                    variant: 'destructive',
+                    title: 'Erro na Atualização',
+                    description: errorMessage,
+                });
+            } finally {
+                setExistingPaymentFile(null);
+                if (fileInputRef.current) {
+                  fileInputRef.current.value = '';
+                }
+            }
+        });
+    };
+    reader.onerror = (error) => {
+        toast({ variant: 'destructive', title: 'Erro ao Ler Arquivo', description: 'Não foi possível ler o arquivo selecionado.' });
+    };
+  };
+
 
   const executeOperationWithOptions = (options: ReportOptions) => {
     if (!selectedOperation) return;
@@ -261,6 +320,11 @@ export default function OperationsPage() {
 
     if (selectedOperation === 'generate-payment-sheet') {
       executeGeneratePaymentSheet();
+      return;
+    }
+
+    if (selectedOperation === 'update-payment-sheet') {
+      executeUpdatePaymentSheet();
       return;
     }
 
@@ -380,25 +444,52 @@ export default function OperationsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {operations.map(op => (
-                    <button
-                      key={op.id}
-                      onClick={() => setSelectedOperation(op.id)}
-                      className={cn(
-                        "w-full p-4 border rounded-lg text-left flex items-start gap-4 transition-all",
-                        "hover:bg-accent hover:text-accent-foreground",
-                        selectedOperation === op.id ? "bg-accent text-accent-foreground ring-2 ring-primary" : "bg-transparent"
-                      )}
-                    >
-                      <op.icon className="h-8 w-8 text-primary mt-1 shrink-0" />
-                      <div>
-                        <h3 className="text-lg font-semibold">{op.title}</h3>
-                        <p className="text-muted-foreground">{op.description}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                <ScrollArea className="h-[calc(100vh-500px)] pr-4">
+                  <div className="space-y-4">
+                    {operations.map(op => (
+                      <button
+                        key={op.id}
+                        onClick={() => setSelectedOperation(op.id)}
+                        className={cn(
+                          "w-full p-4 border rounded-lg text-left flex items-start gap-4 transition-all",
+                          "hover:bg-accent hover:text-accent-foreground",
+                          selectedOperation === op.id ? "bg-accent text-accent-foreground ring-2 ring-primary" : "bg-transparent"
+                        )}
+                      >
+                        <op.icon className="h-8 w-8 text-primary mt-1 shrink-0" />
+                        <div>
+                          <h3 className="text-lg font-semibold">{op.title}</h3>
+                          <p className="text-muted-foreground">{op.description}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </ScrollArea>
+                
+                {selectedOperation === 'update-payment-sheet' && (
+                  <div className="mt-6 p-4 border-dashed border-2 rounded-lg text-center bg-secondary/30">
+                      <h4 className="font-semibold mb-2">Enviar Planilha Existente</h4>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                              setExistingPaymentFile(file);
+                              toast({ title: 'Arquivo Selecionado', description: file.name });
+                          }
+                      }}
+                        className="hidden"
+                        accept=".xlsx,.xls,.ods,.csv"
+                      />
+                      <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        {existingPaymentFile ? 'Trocar Arquivo' : 'Selecionar Arquivo'}
+                      </Button>
+                      {existingPaymentFile && <p className="text-sm mt-2 text-muted-foreground">Arquivo: {existingPaymentFile.name}</p>}
+                    </div>
+                )}
+
                 <div className="flex justify-end mt-6">
                   <Button size="lg" onClick={handleExecuteOperation} disabled={!selectedOperation || isExecuting}>
                     {isExecuting ? <LoaderCircle className="animate-spin mr-2" /> : null}
