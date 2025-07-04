@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import type { SelectionWithValidation } from '@/types';
+import type { SelectionWithValidation, DetailedReport } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppLogo } from '@/components/icons';
@@ -14,7 +14,8 @@ import { DataTypeIcon } from '@/components/data-type-icon';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from "@/hooks/use-toast";
-import { validateSelectionsAction, type ValidationRequest } from '@/app/actions';
+import { getDetailedValidationReportAction, type ValidationRequest } from '@/app/actions';
+import { ValidationResultsDialog } from '@/components/sheetsifter/validation-results-dialog';
 
 const operations = [
   {
@@ -37,6 +38,8 @@ export default function OperationsPage() {
   const [selections, setSelections] = useState<Map<string, SelectionWithValidation>>(new Map());
   const [selectedOperation, setSelectedOperation] = useState<string | null>(null);
   const [isExecuting, startExecuting] = useTransition();
+  const [isModalOpen, setModalOpen] = useState(false);
+  const [detailedReports, setDetailedReports] = useState<DetailedReport[] | null>(null);
 
   useEffect(() => {
     try {
@@ -81,24 +84,26 @@ export default function OperationsPage() {
         }
         
         try {
-          const results = await validateSelectionsAction(requests);
+          const reports = await getDetailedValidationReportAction(requests);
+          setDetailedReports(reports);
           
           const newSelections = new Map(selections);
-          results.forEach(result => {
-            const selection = newSelections.get(result.key);
+          reports.forEach(report => {
+            const selection = newSelections.get(report.key);
             if (selection) {
-              selection.validationResult = { isValid: result.isValid, reason: result.reason };
-              newSelections.set(result.key, selection);
+              const isValid = report.summary.invalidRows === 0;
+              const reason = isValid 
+                ? `O tipo de dados é uma boa opção para a coluna '${report.columnName}'.`
+                : `${report.summary.invalidRows} de ${report.summary.totalRows} valores são inválidos.`;
+
+              selection.validationResult = { isValid, reason };
+              newSelections.set(report.key, selection);
             }
           });
           setSelections(newSelections);
-          
           sessionStorage.setItem('selections', JSON.stringify(Array.from(newSelections.entries())));
 
-          toast({
-            title: "Verificação Concluída",
-            description: "Os resultados da validação foram atualizados.",
-          });
+          setModalOpen(true);
 
         } catch (error) {
           toast({
@@ -217,6 +222,11 @@ export default function OperationsPage() {
             </Card>
           </div>
         </main>
+        <ValidationResultsDialog 
+            isOpen={isModalOpen} 
+            onOpenChange={setModalOpen} 
+            reports={detailedReports} 
+        />
       </div>
     </TooltipProvider>
   );

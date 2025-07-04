@@ -1,6 +1,6 @@
 'use server';
 
-import type { Selection, DataType } from '@/types';
+import type { Selection, DataType, DetailedReport, DetailedValidationRow } from '@/types';
 
 export interface ValidationRequest {
   key: string;
@@ -14,23 +14,18 @@ export interface ValidationResponse {
 }
 
 function validateSample(sample: string, dataType: DataType): boolean {
-    if (!sample) return true; // Treat empty/null samples as valid for any type
+    if (sample === null || sample === undefined || sample === '') return true;
 
     switch (dataType) {
         case 'text':
             return true;
         case 'number':
-            // Check if it's a valid number, allowing for decimals.
             return !isNaN(parseFloat(sample)) && isFinite(Number(sample));
         case 'date':
-            // Check if it's a valid date string.
-            // This will handle formats like "2023-07-15", "07/21/2023", "July 5, 2023", "2023/07/10"
             return !isNaN(new Date(sample).getTime());
         case 'currency':
-            // Simple check for common currency formats.
-            // Removes currency symbols and commas, then checks if it's a number.
             const cleanedSample = sample.replace(/[\$,€£¥]/g, '').replace(/,/g, '').trim();
-            if (cleanedSample === '') return true; // Allow empty values
+            if (cleanedSample === '') return true;
             return !isNaN(parseFloat(cleanedSample)) && isFinite(Number(cleanedSample));
         default:
             return false;
@@ -45,14 +40,12 @@ function localValidate(selection: Selection): { isValid: boolean; reason: string
         return { isValid: true, reason: 'Nenhum dado de amostra para validar.' };
     }
 
-    // Check if all samples match the data type
     const allValid = fullData.every(sample => validateSample(sample, dataType));
 
     if (allValid) {
         return { isValid: true, reason: `O tipo de dados '${dataType}' é uma boa opção para a coluna '${columnName}'.` };
     }
 
-    // Find the first invalid sample to provide a more specific reason
     const firstInvalidSample = fullData.find(sample => !validateSample(sample, dataType));
 
     return {
@@ -68,7 +61,6 @@ export async function validateSelectionsAction(
   const validationPromises = requests.map(async (request) => {
     const { key, selection } = request;
     
-    // Simulate a short delay to make the loading spinner visible
     await new Promise(resolve => setTimeout(resolve, 200));
 
     try {
@@ -89,4 +81,44 @@ export async function validateSelectionsAction(
   });
 
   return Promise.all(validationPromises);
+}
+
+
+export async function getDetailedValidationReportAction(
+  requests: ValidationRequest[]
+): Promise<DetailedReport[]> {
+  const reports: DetailedReport[] = requests.map(request => {
+    const { key, selection } = request;
+    const { columnName, worksheetName, dataType, fullData } = selection;
+
+    let validRows = 0;
+    const results: DetailedValidationRow[] = fullData.map((value, index) => {
+      const isValid = validateSample(value, dataType);
+      if (isValid) {
+        validRows++;
+      }
+      return {
+        rowIndex: index,
+        value,
+        isValid,
+      };
+    });
+
+    const totalRows = fullData.length;
+    const invalidRows = totalRows - validRows;
+
+    return {
+      key,
+      columnName,
+      worksheetName,
+      results,
+      summary: {
+        totalRows,
+        validRows,
+        invalidRows,
+      },
+    };
+  });
+
+  return reports;
 }

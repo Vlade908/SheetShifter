@@ -35,3 +35,21 @@ export interface SelectionWithValidation extends Selection {
   validationResult?: ValidationResult;
   isValidating: boolean;
 }
+
+export interface DetailedValidationRow {
+  rowIndex: number;
+  value: string;
+  isValid: boolean;
+}
+
+export interface DetailedReport {
+  key: string;
+  columnName: string;
+  worksheetName: string;
+  results: DetailedValidationRow[];
+  summary: {
+    totalRows: number;
+    validRows: number;
+    invalidRows: number;
+  };
+}
