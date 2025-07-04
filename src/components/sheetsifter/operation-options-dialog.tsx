@@ -44,7 +44,7 @@ export function OperationOptionsDialog({ isOpen, onOpenChange, onExecute, operat
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="filter-greater-than" className="col-span-4 text-left mb-2">
-                Incluir no relatório/arquivo apenas linhas onde o valor da planilha principal é maior que:
+                Incluir no relatório/arquivo apenas linhas onde o valor da planilha principal é maior ou igual a:
               </Label>
               <Input
                 id="filter-greater-than"

@@ -162,7 +162,7 @@ function runComparisonValidation(requests: ValidationRequest[], options: ReportO
             if (options.filterGreaterThan !== undefined) {
                 if (row.sourceValue === undefined) return false;
                 const numericSourceValue = parseCurrency(row.sourceValue);
-                return !isNaN(numericSourceValue) && numericSourceValue > options.filterGreaterThan;
+                return !isNaN(numericSourceValue) && numericSourceValue >= options.filterGreaterThan;
             }
             return true;
         });
@@ -319,7 +319,7 @@ export async function compareAndCorrectAction(
 
         const numericSourceValue = parseCurrency(correctValueStr);
         if (options.filterGreaterThan !== undefined) {
-            if (isNaN(numericSourceValue) || numericSourceValue <= options.filterGreaterThan) {
+            if (isNaN(numericSourceValue) || numericSourceValue < options.filterGreaterThan) {
                 continue;
             }
         }
