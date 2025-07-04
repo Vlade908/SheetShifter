@@ -152,12 +152,15 @@ function runComparisonValidation(requests: ValidationRequest[], primaryWorksheet
         });
 
         const results = allResults.filter(row => {
+            if (row.sourceValue === undefined) return false;
+            const numericSourceValue = parseCurrency(row.sourceValue);
+            if (isNaN(numericSourceValue)) return false;
+
             if (options.filterGreaterThan !== undefined) {
-                if (row.sourceValue === undefined) return false;
-                const numericSourceValue = parseCurrency(row.sourceValue);
-                return !isNaN(numericSourceValue) && numericSourceValue >= options.filterGreaterThan;
+                return numericSourceValue >= options.filterGreaterThan;
             }
-            return true;
+            // Default behavior: only include rows where source value is positive
+            return numericSourceValue > 0;
         });
 
         const validRows = results.filter(r => r.isValid).length;
@@ -318,8 +321,16 @@ export async function compareAndCorrectAction(
         if (correctValueStr === undefined) continue;
 
         const numericSourceValue = parseCurrency(correctValueStr);
-        if (options.filterGreaterThan !== undefined) {
-            if (isNaN(numericSourceValue) || numericSourceValue < options.filterGreaterThan) {
+
+        // Filter out rows based on the value in the primary sheet.
+        // Use the specified filter, or default to only including positive values.
+        const filterThreshold = options.filterGreaterThan;
+        if (filterThreshold !== undefined) {
+            if (isNaN(numericSourceValue) || numericSourceValue < filterThreshold) {
+                continue;
+            }
+        } else {
+            if (isNaN(numericSourceValue) || numericSourceValue <= 0) {
                 continue;
             }
         }
