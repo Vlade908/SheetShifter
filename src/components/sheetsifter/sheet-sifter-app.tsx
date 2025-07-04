@@ -43,7 +43,7 @@ function extractColumns(data: any[][], headerRow: number): Column[] {
         .map(row => (row[index] !== undefined && row[index] !== null ? String(row[index]) : ""))
         .filter(val => val !== "");
       return {
-        name: String(header),
+        name: String(header || `Column ${index + 1}`), // Use index for empty headers
         sampleData,
       };
     })
@@ -149,17 +149,14 @@ export default function SheetSifterApp() {
     });
   };
 
-  const handleToggleSelection = (worksheetName: string, column: Column, isSelected: boolean) => {
-    const key = `${worksheetName}-${column.name}`;
+  const handleToggleSelection = (worksheetName: string, column: Column, columnIndex: number, isSelected: boolean) => {
+    const key = `${worksheetName}-${columnIndex}`;
     const newSelections = new Map(selections);
     if (isSelected) {
-      const currentWorksheet = spreadsheetData?.worksheets.find(ws => ws.name === worksheetName);
-      const selectedColumn = currentWorksheet?.columns.find(c => c.name === column.name);
-      
       newSelections.set(key, {
         worksheetName,
         columnName: column.name,
-        sampleData: selectedColumn?.sampleData || [],
+        sampleData: column.sampleData || [],
         dataType: 'text',
         isValidating: false,
       });
@@ -328,15 +325,15 @@ export default function SheetSifterApp() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {worksheet.columns.map((column) => {
-                                    const key = `${worksheet.name}-${column.name}`;
+                                {worksheet.columns.map((column, index) => {
+                                    const key = `${worksheet.name}-${index}`;
                                     const selection = selections.get(key);
                                     return (
                                         <TableRow key={key} className={selection ? 'bg-primary/5' : ''}>
                                             <TableCell>
                                                 <Checkbox
                                                     checked={!!selection}
-                                                    onCheckedChange={(checked) => handleToggleSelection(worksheet.name, column, !!checked)}
+                                                    onCheckedChange={(checked) => handleToggleSelection(worksheet.name, column, index, !!checked)}
                                                 />
                                             </TableCell>
                                             <TableCell className="font-medium">{column.name}</TableCell>
