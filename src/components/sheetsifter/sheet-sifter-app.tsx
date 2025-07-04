@@ -67,6 +67,7 @@ export default function SheetSifterApp() {
   const [selections, setSelections] = useState<Map<string, SelectionWithValidation>>(new Map());
   const [searchTerm, setSearchTerm] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -75,6 +76,7 @@ export default function SheetSifterApp() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setIsProcessingFile(true);
     const reader = new FileReader();
     reader.onload = (e) => {
         try {
@@ -105,17 +107,20 @@ export default function SheetSifterApp() {
             console.error("Error processing file:", error);
             toast({
                 variant: "destructive",
-                title: "Error Processing File",
-                description: "There was an issue parsing your spreadsheet. Please check the file format.",
+                title: "Erro ao Processar Arquivo",
+                description: "Ocorreu um problema ao analisar sua planilha. Por favor, verifique o formato do arquivo.",
             });
+        } finally {
+            setIsProcessingFile(false);
         }
     };
     reader.onerror = () => {
       toast({
           variant: "destructive",
-          title: "File Read Error",
-          description: "Could not read the selected file.",
+          title: "Erro de Leitura de Arquivo",
+          description: "Não foi possível ler o arquivo selecionado.",
       });
+      setIsProcessingFile(false);
     }
     reader.readAsArrayBuffer(file);
     
@@ -262,8 +267,8 @@ export default function SheetSifterApp() {
       } catch (error) {
         toast({
           variant: "destructive",
-          title: "Validation Failed",
-          description: "An unexpected error occurred during validation.",
+          title: "Falha na Validação",
+          description: "Ocorreu um erro inesperado durante a validação.",
         });
         const errorSelections = new Map(selectionsToValidate);
         errorSelections.forEach(s => s.isValidating = false);
@@ -281,7 +286,7 @@ export default function SheetSifterApp() {
         {step === 'selection' && (
             <Button variant="outline" onClick={handleStartOver}>
                 <RefreshCw className="mr-2 h-4 w-4"/>
-                Start Over
+                Começar de Novo
             </Button>
         )}
     </header>
@@ -297,8 +302,8 @@ export default function SheetSifterApp() {
                       <div className="mx-auto bg-primary/10 rounded-full p-4 w-fit mb-4">
                           <UploadCloud className="h-12 w-12 text-primary" />
                       </div>
-                      <CardTitle className="font-headline text-3xl">Upload Your Spreadsheet</CardTitle>
-                      <CardDescription className="text-base">Upload an .xls, .xlsx, .ods or .csv file to begin selecting and validating your data.</CardDescription>
+                      <CardTitle className="font-headline text-3xl">Envie sua Planilha</CardTitle>
+                      <CardDescription className="text-base">Envie um arquivo .xls, .xlsx, .ods ou .csv para começar a selecionar e validar seus dados.</CardDescription>
                   </CardHeader>
                   <CardContent>
                       <input
@@ -308,8 +313,15 @@ export default function SheetSifterApp() {
                           className="hidden"
                           accept=".xlsx,.xls,.ods,.csv"
                       />
-                      <Button size="lg" onClick={handleUploadClick}>
-                          Select File to Upload
+                      <Button size="lg" onClick={handleUploadClick} disabled={isProcessingFile}>
+                          {isProcessingFile ? (
+                            <>
+                              <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                              Processando...
+                            </>
+                          ) : (
+                            "Selecionar Arquivo para Enviar"
+                          )}
                       </Button>
                   </CardContent>
               </Card>
@@ -325,10 +337,10 @@ export default function SheetSifterApp() {
         <main className="flex-grow p-4 md:p-8">
           <Card className="w-full mx-auto shadow-lg">
             <CardHeader>
-              <CardTitle className="font-headline text-3xl">Select Columns and Validate</CardTitle>
+              <CardTitle className="font-headline text-3xl">Selecione as Colunas e Valide</CardTitle>
               <CardDescription>
-                File: <span className="font-medium text-primary">{spreadsheetData?.fileName}</span>. 
-                Select a worksheet tab, choose the header row, and select columns to validate.
+                Arquivo: <span className="font-medium text-primary">{spreadsheetData?.fileName}</span>. 
+                Selecione uma aba, escolha a linha do cabeçalho e selecione as colunas para validar.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -370,7 +382,7 @@ export default function SheetSifterApp() {
                      <div className="flex flex-col md:flex-row items-center justify-between gap-4 my-4">
                         <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg w-full md:w-auto flex-grow">
                             <Label htmlFor={`header-row-${worksheet.name}`} className="text-sm font-medium shrink-0">
-                                Header Row
+                                Linha do Cabeçalho
                             </Label>
                             <Input
                                 id={`header-row-${worksheet.name}`}
@@ -380,12 +392,12 @@ export default function SheetSifterApp() {
                                 value={worksheet.headerRow}
                                 onChange={(e) => handleHeaderRowChange(worksheet.name, parseInt(e.target.value, 10))}
                             />
-                            <p className="text-sm text-muted-foreground">Specify which row contains your column names.</p>
+                            <p className="text-sm text-muted-foreground">Especifique qual linha contém os nomes das colunas.</p>
                         </div>
                         <div className="relative w-full md:w-72">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Search columns..."
+                                placeholder="Buscar colunas..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="pl-10 h-9"
@@ -398,10 +410,10 @@ export default function SheetSifterApp() {
                             <TableHeader>
                                 <TableRow className="bg-secondary/50 hover:bg-secondary/50">
                                     <TableHead className="w-[50px]"></TableHead>
-                                    <TableHead>Column</TableHead>
-                                    <TableHead>Data Type</TableHead>
+                                    <TableHead>Coluna</TableHead>
+                                    <TableHead>Tipo de Dado</TableHead>
                                     <TableHead>Papel</TableHead>
-                                    <TableHead className="text-right">Validation Status</TableHead>
+                                    <TableHead className="text-right">Status da Validação</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -431,7 +443,7 @@ export default function SheetSifterApp() {
                                         return (
                                             <TableRow>
                                                 <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                                                    No columns match your search.
+                                                    Nenhuma coluna corresponde à sua busca.
                                                 </TableCell>
                                             </TableRow>
                                         );
@@ -466,7 +478,7 @@ export default function SheetSifterApp() {
                                                             disabled={!selection}
                                                         >
                                                             <SelectTrigger className="w-[150px]">
-                                                                <SelectValue placeholder="Select type..." />
+                                                                <SelectValue placeholder="Selecione o tipo..." />
                                                             </SelectTrigger>
                                                             <SelectContent>
                                                                 {dataTypes.map((type) => (
@@ -487,7 +499,7 @@ export default function SheetSifterApp() {
                                                             disabled={!selection}
                                                         >
                                                             <SelectTrigger className="w-[180px]">
-                                                                <SelectValue placeholder="Select role..." />
+                                                                <SelectValue placeholder="Selecione o papel..." />
                                                             </SelectTrigger>
                                                             <SelectContent>
                                                                 <SelectItem value="key">
