@@ -39,21 +39,21 @@ function validateSample(sample: string, dataType: DataType): boolean {
 
 
 function localValidate(selection: Selection): { isValid: boolean; reason: string } {
-    const { dataType, sampleData, columnName } = selection;
+    const { dataType, fullData, columnName } = selection;
 
-    if (sampleData.length === 0) {
+    if (fullData.length === 0) {
         return { isValid: true, reason: 'Nenhum dado de amostra para validar.' };
     }
 
     // Check if all samples match the data type
-    const allValid = sampleData.every(sample => validateSample(sample, dataType));
+    const allValid = fullData.every(sample => validateSample(sample, dataType));
 
     if (allValid) {
         return { isValid: true, reason: `O tipo de dados '${dataType}' é uma boa opção para a coluna '${columnName}'.` };
     }
 
     // Find the first invalid sample to provide a more specific reason
-    const firstInvalidSample = sampleData.find(sample => !validateSample(sample, dataType));
+    const firstInvalidSample = fullData.find(sample => !validateSample(sample, dataType));
 
     return {
         isValid: false,
