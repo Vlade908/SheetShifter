@@ -36,7 +36,7 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports }: Valid
                 <TabsList>
                 {reports.map(report => (
                     <TabsTrigger key={report.key} value={report.key}>
-                    {report.columnName}
+                    {report.columnName} (vs {report.sourceColumnName})
                     {report.summary.invalidRows > 0 && (
                         <Badge variant="destructive" className="ml-2">
                         {report.summary.invalidRows}
@@ -61,8 +61,8 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports }: Valid
                         <TableHeader>
                         <TableRow>
                             <TableHead className="w-[100px]">Linha</TableHead>
-                            <TableHead>Valor (Fonte)</TableHead>
-                            <TableHead>Valor (Atual)</TableHead>
+                            <TableHead>Valor ({report.sourceColumnName} em {report.sourceWorksheetName})</TableHead>
+                            <TableHead>Valor ({report.columnName} em {report.worksheetName})</TableHead>
                             <TableHead className="w-[150px] text-center">Status</TableHead>
                         </TableRow>
                         </TableHeader>

@@ -150,8 +150,10 @@ function runComparisonValidation(requests: ValidationRequest[]): DetailedReport[
 
         reports.push({
             key: `${targetValueCol.worksheetName}-${targetValueCol.columnName}`,
-            columnName: `${targetValueCol.columnName} (vs ${sourceValueCol.columnName})`,
+            columnName: targetValueCol.columnName,
             worksheetName: targetValueCol.worksheetName,
+            sourceWorksheetName: sourceValueCol.worksheetName,
+            sourceColumnName: sourceValueCol.columnName,
             results,
             summary: {
                 totalRows,

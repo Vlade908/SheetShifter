@@ -48,6 +48,8 @@ export interface DetailedReport {
   key: string;
   columnName: string;
   worksheetName: string;
+  sourceWorksheetName?: string;
+  sourceColumnName?: string;
   results: DetailedValidationRow[];
   summary: {
     totalRows: number;
