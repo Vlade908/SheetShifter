@@ -27,7 +27,7 @@ const operations = [
   {
     id: 'check-values',
     title: 'Verificar Valores',
-    description: 'Use uma coluna como chave (ex: nome do aluno) para validar os dados em outra coluna da mesma tabela.',
+    description: 'Use colunas "Chave" para encontrar correspondências e compare os dados em colunas "Valor".',
     icon: ClipboardCheck,
   },
 ];
@@ -73,6 +73,19 @@ export default function OperationsPage() {
     }
 
     if (selectedOperation === 'check-values') {
+      const allSelections = Array.from(selections.values());
+      const keys = allSelections.filter(s => s.role === 'key');
+      const values = allSelections.filter(s => s.role === 'value');
+
+      if (keys.length < 2 || values.length < 2) {
+          toast({
+              variant: 'destructive',
+              title: 'Seleção Incompleta',
+              description: 'Para comparar valores, selecione pelo menos duas colunas "Chave" e duas colunas "Valor" entre as planilhas.',
+          });
+          return;
+      }
+
       startExecuting(async () => {
         const requests: ValidationRequest[] = Array.from(selections.entries()).map(
           ([key, selection]) => ({ key, selection })
@@ -93,8 +106,8 @@ export default function OperationsPage() {
             if (selection) {
               const isValid = report.summary.invalidRows === 0;
               const reason = isValid 
-                ? `O tipo de dados é uma boa opção para a coluna '${report.columnName}'.`
-                : `${report.summary.invalidRows} de ${report.summary.totalRows} valores são inválidos.`;
+                ? `Todos os valores correspondentes são idênticos para '${report.columnName}'.`
+                : `${report.summary.invalidRows} de ${report.summary.totalRows} valores são divergentes.`;
 
               selection.validationResult = { isValid, reason };
               newSelections.set(report.key, selection);
@@ -106,11 +119,12 @@ export default function OperationsPage() {
           setModalOpen(true);
 
         } catch (error) {
-          toast({
-            variant: 'destructive',
-            title: 'Erro na Verificação',
-            description: 'Ocorreu um erro ao verificar os valores.',
-          });
+            const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro ao verificar os valores.';
+            toast({
+              variant: 'destructive',
+              title: 'Erro na Verificação',
+              description: errorMessage,
+            });
         }
       });
     }
@@ -174,9 +188,14 @@ export default function OperationsPage() {
                             )}
                         </div>
 
-                        <div className="flex items-center gap-2 mt-2">
-                          <DataTypeIcon type={selection.dataType} className="h-4 w-4" />
-                          <Badge variant="outline" className="capitalize">{selection.dataType}</Badge>
+                        <div className="flex items-center gap-4 mt-2">
+                          <div className="flex items-center gap-2">
+                            <DataTypeIcon type={selection.dataType} className="h-4 w-4" />
+                            <Badge variant="outline" className="capitalize">{selection.dataType}</Badge>
+                          </div>
+                          {selection.role && (
+                             <Badge variant={selection.role === 'key' ? 'default' : 'secondary'} className="capitalize">{selection.role}</Badge>
+                          )}
                         </div>
                       </div>
                     ))}

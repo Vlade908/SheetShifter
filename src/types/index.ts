@@ -22,6 +22,7 @@ export interface Selection {
   worksheetName: string;
   columnName: string;
   dataType: DataType;
+  role?: 'key' | 'value';
   sampleData: string[];
   fullData: string[];
 }

@@ -22,7 +22,7 @@ import { Separator } from "@/components/ui/separator";
 
 import { AppLogo } from "@/components/icons";
 import { DataTypeIcon } from "@/components/data-type-icon";
-import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search } from "lucide-react";
+import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search, KeyRound, TextSelect } from "lucide-react";
 
 const dataTypes: DataType[] = ['text', 'number', 'date', 'currency'];
 
@@ -168,6 +168,7 @@ export default function SheetSifterApp() {
         sampleData: column.sampleData || [],
         fullData: column.fullData || [],
         dataType: 'text',
+        role: undefined,
         isValidating: false,
       });
     } else {
@@ -186,12 +187,22 @@ export default function SheetSifterApp() {
     }
   };
 
+  const handleRoleChange = (key: string, role: 'key' | 'value') => {
+    const newSelections = new Map(selections);
+    const selection = newSelections.get(key);
+    if (selection) {
+      selection.role = role;
+      newSelections.set(key, selection);
+      setSelections(newSelections);
+    }
+  };
+
   const handleValidateAndProceed = () => {
     if (selections.size === 0) {
       toast({
         variant: "destructive",
-        title: "No columns selected",
-        description: "Please select at least one column to validate.",
+        title: "Nenhuma coluna selecionada",
+        description: "Selecione pelo menos uma coluna para validar.",
       });
       return;
     }
@@ -219,8 +230,8 @@ export default function SheetSifterApp() {
         });
         setSelections(validatedSelections);
         toast({
-            title: "Validation Complete",
-            description: "Redirecting to operations page...",
+            title: "Validação de tipo completa",
+            description: "Redirecionando para a página de operações...",
         });
         
         const selectionsToStore = Array.from(validatedSelections.entries());
@@ -352,6 +363,7 @@ export default function SheetSifterApp() {
                                     <TableHead className="w-[50px]"></TableHead>
                                     <TableHead>Column</TableHead>
                                     <TableHead>Data Type</TableHead>
+                                    <TableHead>Papel</TableHead>
                                     <TableHead className="text-right">Validation Status</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -381,7 +393,7 @@ export default function SheetSifterApp() {
                                     if (displayedColumns.length === 0) {
                                         return (
                                             <TableRow>
-                                                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                                                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                                                     No columns match your search.
                                                 </TableCell>
                                             </TableRow>
@@ -397,7 +409,7 @@ export default function SheetSifterApp() {
                                             <React.Fragment key={key}>
                                                 {isFirstUnselected && selectedColumns.length > 0 && unselectedColumns.length > 0 && (
                                                     <TableRow className="hover:bg-transparent">
-                                                        <TableCell colSpan={4} className="py-2 px-0">
+                                                        <TableCell colSpan={5} className="py-2 px-0">
                                                             <Separator />
                                                         </TableCell>
                                                     </TableRow>
@@ -416,7 +428,7 @@ export default function SheetSifterApp() {
                                                             onValueChange={(value) => handleDataTypeChange(key, value as DataType)}
                                                             disabled={!selection}
                                                         >
-                                                            <SelectTrigger className="w-[180px]">
+                                                            <SelectTrigger className="w-[150px]">
                                                                 <SelectValue placeholder="Select type..." />
                                                             </SelectTrigger>
                                                             <SelectContent>
@@ -428,6 +440,31 @@ export default function SheetSifterApp() {
                                                                         </div>
                                                                     </SelectItem>
                                                                 ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Select
+                                                            value={selection?.role}
+                                                            onValueChange={(value) => handleRoleChange(key, value as 'key' | 'value')}
+                                                            disabled={!selection}
+                                                        >
+                                                            <SelectTrigger className="w-[150px]">
+                                                                <SelectValue placeholder="Select role..." />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="key">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <KeyRound className="h-4 w-4 text-muted-foreground"/>
+                                                                        <span>Chave</span>
+                                                                    </div>
+                                                                </SelectItem>
+                                                                <SelectItem value="value">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <TextSelect className="h-4 w-4 text-muted-foreground"/>
+                                                                        <span>Valor</span>
+                                                                    </div>
+                                                                </SelectItem>
                                                             </SelectContent>
                                                         </Select>
                                                     </TableCell>
