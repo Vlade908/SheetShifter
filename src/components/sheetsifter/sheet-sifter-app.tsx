@@ -70,6 +70,8 @@ export default function SheetSifterApp() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
+  const dataTypes: DataType[] = ['text', 'number', 'date', 'currency'];
+
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
