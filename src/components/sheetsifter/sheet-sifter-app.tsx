@@ -41,14 +41,14 @@ export default function SheetSifterApp() {
                 const worksheet = workbook.Sheets[sheetName];
                 const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
                 
-                if (jsonData.length === 0) {
+                if (jsonData.length < 2) {
                     return { name: sheetName, columns: [] };
                 }
 
-                const headers = jsonData[0] as string[];
+                const headers = jsonData[1] as string[];
                 const columns: Column[] = headers.map((header, index) => {
                     // Get up to 3 sample data rows
-                    const sampleData = jsonData.slice(1, 4).map(row => row[index] !== undefined && row[index] !== null ? String(row[index]) : "").filter(val => val !== "");
+                    const sampleData = jsonData.slice(2, 5).map(row => row[index] !== undefined && row[index] !== null ? String(row[index]) : "").filter(val => val !== "");
                     return {
                         name: String(header),
                         sampleData,
