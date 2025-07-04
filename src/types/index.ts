@@ -56,9 +56,11 @@ export interface DetailedReport {
   valueDataType?: DataType;
   sourceValueDataType?: DataType;
   results: DetailedValidationRow[];
+  duplicateKeyList: string[];
   summary: {
     totalRows: number;
     validRows: number;
     invalidRows: number;
+    duplicateKeys: number;
   };
 }

@@ -129,6 +129,17 @@ function runComparisonValidation(requests: ValidationRequest[], options: ReportO
         const targetWs = worksheetPairs[i];
         const targetKeyCol = targetWs.keys[0];
         const targetValueCol = targetWs.values[0];
+        
+        const targetKeyCounts = new Map<string, number>();
+        for (const key of targetKeyCol.fullData) {
+            if (key) {
+                targetKeyCounts.set(key, (targetKeyCounts.get(key) || 0) + 1);
+            }
+        }
+
+        const duplicateKeyList = Array.from(targetKeyCounts.entries())
+            .filter(([_, count]) => count > 1)
+            .map(([key, _]) => key);
 
         const allResults = targetValueCol.fullData.map((value, index) => {
             const targetKey = targetKeyCol.fullData[index];
@@ -171,10 +182,12 @@ function runComparisonValidation(requests: ValidationRequest[], options: ReportO
             valueDataType: targetValueCol.dataType,
             sourceValueDataType: sourceValueCol.dataType,
             results,
+            duplicateKeyList,
             summary: {
                 totalRows,
                 validRows,
                 invalidRows,
+                duplicateKeys: duplicateKeyList.length,
             },
         });
     }
@@ -208,10 +221,12 @@ function runDataTypeValidation(requests: ValidationRequest[]): DetailedReport[] 
         columnName,
         worksheetName,
         results,
+        duplicateKeyList: [],
         summary: {
           totalRows,
           validRows,
           invalidRows,
+          duplicateKeys: 0,
         },
       };
     });

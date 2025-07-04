@@ -122,6 +122,9 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                           <p><strong>Total de Linhas (no filtro):</strong> {report.summary.totalRows}</p>
                           <p className="font-semibold text-green-700"><strong>Correspondências Válidas:</strong> {report.summary.validRows}</p>
                           <p className="font-semibold text-red-700"><strong>Divergências:</strong> {report.summary.invalidRows}</p>
+                          {report.summary.duplicateKeys > 0 && (
+                            <p className="font-semibold text-orange-600"><strong>Alunos Duplicados:</strong> {report.summary.duplicateKeys}</p>
+                          )}
                         </div>
                         <Button
                           size="sm"
@@ -136,41 +139,68 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                           Baixar Planilha Corrigida
                         </Button>
                     </div>
-
-                    <Table>
-                        <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-[80px]">Linha</TableHead>
-                            {report.sourceKeyColumnName && <TableHead>{report.sourceKeyColumnName}</TableHead>}
-                            <TableHead>Valor ({report.sourceColumnName})</TableHead>
-                            <TableHead>Valor ({report.columnName})</TableHead>
-                            <TableHead className="w-[150px] text-center">Status</TableHead>
-                        </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {report.results.map(row => (
-                            <TableRow key={row.rowIndex}>
-                            <TableCell>{row.rowIndex + 1}</TableCell>
-                            {report.sourceKeyColumnName && <TableCell className="font-medium">{row.keyValue}</TableCell>}
-                            <TableCell className="font-mono text-xs">{row.sourceValue !== undefined ? formatValue(row.sourceValue, report.sourceValueDataType) : <span className="text-muted-foreground italic">Não encontrado</span>}</TableCell>
-                            <TableCell className="font-mono text-xs">{formatValue(row.value, report.valueDataType) || <span className="text-muted-foreground italic">Vazio</span>}</TableCell>
-                            <TableCell className="text-center">
-                                {row.isValid ? (
-                                <Badge variant="outline" className="text-green-600 border-green-600">
-                                    <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
-                                    Correspondente
-                                </Badge>
-                                ) : (
-                                <Badge variant="destructive">
-                                    <XCircle className="mr-1 h-3.5 w-3.5" />
-                                    Divergente
-                                </Badge>
-                                )}
-                            </TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
+                    <Tabs defaultValue="details" className="w-full">
+                        <TabsList>
+                            <TabsTrigger value="details">Resultados Detalhados</TabsTrigger>
+                            {report.duplicateKeyList && report.duplicateKeyList.length > 0 && (
+                                <TabsTrigger value="duplicates">Alunos Duplicados</TabsTrigger>
+                            )}
+                        </TabsList>
+                        <TabsContent value="details">
+                            <Table>
+                                <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[80px]">Linha</TableHead>
+                                    {report.sourceKeyColumnName && <TableHead>{report.keyColumnName}</TableHead>}
+                                    <TableHead>Valor ({report.sourceColumnName})</TableHead>
+                                    <TableHead>Valor ({report.columnName})</TableHead>
+                                    <TableHead className="w-[150px] text-center">Status</TableHead>
+                                </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                {report.results.map(row => (
+                                    <TableRow key={row.rowIndex}>
+                                    <TableCell>{row.rowIndex + 1}</TableCell>
+                                    {report.sourceKeyColumnName && <TableCell className="font-medium">{row.keyValue}</TableCell>}
+                                    <TableCell className="font-mono text-xs">{row.sourceValue !== undefined ? formatValue(row.sourceValue, report.sourceValueDataType) : <span className="text-muted-foreground italic">Não encontrado</span>}</TableCell>
+                                    <TableCell className="font-mono text-xs">{formatValue(row.value, report.valueDataType) || <span className="text-muted-foreground italic">Vazio</span>}</TableCell>
+                                    <TableCell className="text-center">
+                                        {row.isValid ? (
+                                        <Badge variant="outline" className="text-green-600 border-green-600">
+                                            <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                                            Correspondente
+                                        </Badge>
+                                        ) : (
+                                        <Badge variant="destructive">
+                                            <XCircle className="mr-1 h-3.5 w-3.5" />
+                                            Divergente
+                                        </Badge>
+                                        )}
+                                    </TableCell>
+                                    </TableRow>
+                                ))}
+                                </TableBody>
+                            </Table>
+                        </TabsContent>
+                        {report.duplicateKeyList && report.duplicateKeyList.length > 0 && (
+                          <TabsContent value="duplicates">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Nome do Aluno Duplicado</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {report.duplicateKeyList.map((name, index) => (
+                                        <TableRow key={index}>
+                                            <TableCell className="font-medium">{name}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                          </TabsContent>
+                        )}
+                    </Tabs>
                  </div>
               </TabsContent>
             ))}
