@@ -132,13 +132,13 @@ export default function SheetSifterApp() {
         setSelections(validatedSelections);
         toast({
             title: "Validation Complete",
-            description: "AI analysis of column data types is finished.",
+            description: "Column data types have been validated.",
           });
       } catch (error) {
         toast({
           variant: "destructive",
           title: "Validation Failed",
-          description: "An unexpected error occurred during AI validation.",
+          description: "An unexpected error occurred during validation.",
         });
         const errorSelections = new Map(selectionsToValidate);
         errorSelections.forEach(s => s.isValidating = false);
