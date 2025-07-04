@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useTransition, useRef } from "react";
+import { useRouter } from "next/navigation";
 import * as XLSX from 'xlsx';
 import type { DataType, SelectionWithValidation, SpreadsheetData, Worksheet, Column } from "@/types";
 import { validateSelectionsAction, type ValidationRequest } from "@/app/actions";
@@ -21,7 +22,7 @@ import { Separator } from "@/components/ui/separator";
 
 import { AppLogo } from "@/components/icons";
 import { DataTypeIcon } from "@/components/data-type-icon";
-import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, AlertCircle, RefreshCw, Search } from "lucide-react";
+import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search } from "lucide-react";
 
 const dataTypes: DataType[] = ['text', 'number', 'date', 'currency'];
 
@@ -66,6 +67,7 @@ export default function SheetSifterApp() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -127,6 +129,7 @@ export default function SheetSifterApp() {
     setStep("upload");
     setSpreadsheetData(null);
     setSelections(new Map());
+    sessionStorage.removeItem('selections');
   };
 
   const handleHeaderRowChange = (worksheetName: string, newHeaderRow: number) => {
@@ -183,7 +186,7 @@ export default function SheetSifterApp() {
     }
   };
 
-  const handleValidate = () => {
+  const handleValidateAndProceed = () => {
     if (selections.size === 0) {
       toast({
         variant: "destructive",
@@ -217,8 +220,13 @@ export default function SheetSifterApp() {
         setSelections(validatedSelections);
         toast({
             title: "Validation Complete",
-            description: "Column data types have been validated.",
-          });
+            description: "Redirecting to operations page...",
+        });
+        
+        const selectionsToStore = Array.from(validatedSelections.entries());
+        sessionStorage.setItem('selections', JSON.stringify(selectionsToStore));
+        router.push('/operations');
+
       } catch (error) {
         toast({
           variant: "destructive",
@@ -453,13 +461,13 @@ export default function SheetSifterApp() {
                 ))}
               </Tabs>
               <div className="flex justify-end mt-6">
-                <Button size="lg" onClick={handleValidate} disabled={isPending || selections.size === 0}>
+                <Button size="lg" onClick={handleValidateAndProceed} disabled={isPending || selections.size === 0}>
                   {isPending ? (
                     <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <AlertCircle className="mr-2 h-4 w-4" />
+                    <ArrowRight className="mr-2 h-4 w-4" />
                   )}
-                  Validate {selections.size > 0 ? `${selections.size} Column(s)` : ''}
+                  Validar e Prosseguir {selections.size > 0 ? `(${selections.size})` : ''}
                 </Button>
               </div>
             </CardContent>
