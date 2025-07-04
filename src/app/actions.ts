@@ -137,6 +137,7 @@ function runComparisonValidation(requests: ValidationRequest[], options: ReportO
             
             return {
                 rowIndex: index,
+                keyValue: targetKey || '',
                 value: value,
                 sourceValue: sourceValue,
                 isValid,
@@ -160,8 +161,10 @@ function runComparisonValidation(requests: ValidationRequest[], options: ReportO
             key: `${targetValueCol.worksheetName}-${targetValueCol.columnName}`,
             columnName: targetValueCol.columnName,
             worksheetName: targetValueCol.worksheetName,
+            keyColumnName: targetKeyCol.columnName,
             sourceWorksheetName: sourceValueCol.worksheetName,
             sourceColumnName: sourceValueCol.columnName,
+            sourceKeyColumnName: sourceKeyCol.columnName,
             valueDataType: targetValueCol.dataType,
             sourceValueDataType: sourceValueCol.dataType,
             results,

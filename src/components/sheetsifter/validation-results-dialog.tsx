@@ -140,9 +140,10 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                     <Table>
                         <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[100px]">Linha</TableHead>
-                            <TableHead>Valor ({report.sourceColumnName} em {report.sourceWorksheetName})</TableHead>
-                            <TableHead>Valor ({report.columnName} em {report.worksheetName})</TableHead>
+                            <TableHead className="w-[80px]">Linha</TableHead>
+                            {report.sourceKeyColumnName && <TableHead>{report.sourceKeyColumnName}</TableHead>}
+                            <TableHead>Valor ({report.sourceColumnName})</TableHead>
+                            <TableHead>Valor ({report.columnName})</TableHead>
                             <TableHead className="w-[150px] text-center">Status</TableHead>
                         </TableRow>
                         </TableHeader>
@@ -150,6 +151,7 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                         {report.results.map(row => (
                             <TableRow key={row.rowIndex}>
                             <TableCell>{row.rowIndex + 1}</TableCell>
+                            {report.sourceKeyColumnName && <TableCell className="font-medium">{row.keyValue}</TableCell>}
                             <TableCell className="font-mono text-xs">{row.sourceValue !== undefined ? formatValue(row.sourceValue, report.sourceValueDataType) : <span className="text-muted-foreground italic">Não encontrado</span>}</TableCell>
                             <TableCell className="font-mono text-xs">{formatValue(row.value, report.valueDataType) || <span className="text-muted-foreground italic">Vazio</span>}</TableCell>
                             <TableCell className="text-center">

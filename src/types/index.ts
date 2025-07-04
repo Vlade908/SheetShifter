@@ -39,6 +39,7 @@ export interface SelectionWithValidation extends Selection {
 
 export interface DetailedValidationRow {
   rowIndex: number;
+  keyValue?: string;
   value: string;
   sourceValue?: string;
   isValid: boolean;
@@ -48,8 +49,10 @@ export interface DetailedReport {
   key: string;
   columnName: string;
   worksheetName: string;
+  keyColumnName?: string;
   sourceWorksheetName?: string;
   sourceColumnName?: string;
+  sourceKeyColumnName?: string;
   valueDataType?: DataType;
   sourceValueDataType?: DataType;
   results: DetailedValidationRow[];
