@@ -50,6 +50,8 @@ export interface DetailedReport {
   worksheetName: string;
   sourceWorksheetName?: string;
   sourceColumnName?: string;
+  valueDataType?: DataType;
+  sourceValueDataType?: DataType;
   results: DetailedValidationRow[];
   summary: {
     totalRows: number;

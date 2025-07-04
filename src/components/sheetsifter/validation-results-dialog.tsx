@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import type { DetailedReport, Selection, SpreadsheetData } from '@/types';
+import type { DetailedReport, Selection, SpreadsheetData, DataType } from '@/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -27,6 +27,20 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
   const { toast } = useToast();
   const [isDownloading, startDownloading] = useTransition();
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
+
+  const formatValue = (value: string | undefined | null, dataType: DataType | undefined): string => {
+    if (dataType !== 'currency' || value === null || value === undefined || value.trim() === '') {
+      return value || '';
+    }
+    const numericValue = parseFloat(value.replace(/\./g, '').replace(',', '.'));
+    if (isNaN(numericValue)) {
+      return value;
+    }
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(numericValue);
+  };
 
   const handleDownload = async (targetWorksheet: string) => {
     if (!spreadsheetData || !primaryWorksheetName || selections.length === 0) {
@@ -135,8 +149,8 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                         {report.results.map(row => (
                             <TableRow key={row.rowIndex}>
                             <TableCell>{row.rowIndex + 1}</TableCell>
-                            <TableCell className="font-mono text-xs">{row.sourceValue !== undefined ? row.sourceValue : <span className="text-muted-foreground italic">Não encontrado</span>}</TableCell>
-                            <TableCell className="font-mono text-xs">{row.value || <span className="text-muted-foreground italic">Vazio</span>}</TableCell>
+                            <TableCell className="font-mono text-xs">{row.sourceValue !== undefined ? formatValue(row.sourceValue, report.sourceValueDataType) : <span className="text-muted-foreground italic">Não encontrado</span>}</TableCell>
+                            <TableCell className="font-mono text-xs">{formatValue(row.value, report.valueDataType) || <span className="text-muted-foreground italic">Vazio</span>}</TableCell>
                             <TableCell className="text-center">
                                 {row.isValid ? (
                                 <Badge variant="outline" className="text-green-600 border-green-600">

@@ -146,7 +146,7 @@ function runComparisonValidation(requests: ValidationRequest[], options: ReportO
         const results = allResults.filter(row => {
             if (options.filterGreaterThan !== undefined) {
                 if (row.sourceValue === undefined) return false;
-                const numericSourceValue = parseFloat(row.sourceValue.replace(/,/g, '.'));
+                const numericSourceValue = parseFloat(row.sourceValue.replace(/\./g, '').replace(',', '.'));
                 return !isNaN(numericSourceValue) && numericSourceValue > options.filterGreaterThan;
             }
             return true;
@@ -162,6 +162,8 @@ function runComparisonValidation(requests: ValidationRequest[], options: ReportO
             worksheetName: targetValueCol.worksheetName,
             sourceWorksheetName: sourceValueCol.worksheetName,
             sourceColumnName: sourceValueCol.columnName,
+            valueDataType: targetValueCol.dataType,
+            sourceValueDataType: sourceValueCol.dataType,
             results,
             summary: {
                 totalRows,
@@ -264,6 +266,9 @@ export async function compareAndCorrectAction(
     const targetValueCol = targetSelections.find(s => s.role === 'value');
 
     if (!targetKeyCol || !targetValueCol) continue;
+    
+    const isValueCurrency = targetValueCol.dataType === 'currency';
+    const currencyFormat = 'R$ #,##0.00';
 
     const headerRowArray = targetWorksheet.data[targetWorksheet.headerRow - 1] as string[];
     const keyColIndex = headerRowArray.findIndex(h => h === targetKeyCol.columnName);
@@ -275,32 +280,33 @@ export async function compareAndCorrectAction(
     }
     
     const originalData = targetWorksheet.data;
-    const correctedSheetData = [originalData[targetWorksheet.headerRow - 1]];
-    let hasCorrections = false;
+    const correctedSheetData: any[][] = [originalData[targetWorksheet.headerRow - 1]];
 
     for (let i = targetWorksheet.headerRow; i < originalData.length; i++) {
       const row = originalData[i];
       const key = row[keyColIndex];
-      const currentValue = row[valueColIndex];
 
       if (key && sourceMap.has(key)) {
-        const correctValue = sourceMap.get(key)!;
+        const correctValueStr = sourceMap.get(key)!;
+        const numericSourceValue = parseFloat(correctValueStr.replace(/\./g, '').replace(',', '.'));
         
         if (options.filterGreaterThan !== undefined) {
-          const numericSourceValue = parseFloat(correctValue.replace(/,/g, '.'));
           if (isNaN(numericSourceValue) || numericSourceValue <= options.filterGreaterThan) {
             continue; 
           }
         }
 
         const correctedRow = [...row];
-        if (currentValue !== correctValue) {
-          correctedRow[valueColIndex] = correctValue;
-          hasCorrections = true;
+        if (isValueCurrency && !isNaN(numericSourceValue)) {
+            correctedRow[valueColIndex] = { t: 'n', v: numericSourceValue, z: currencyFormat };
+        } else {
+            correctedRow[valueColIndex] = correctValueStr;
         }
+        
         correctedSheetData.push(correctedRow);
       }
     }
+
 
     if (correctedSheetData.length > 1) {
       const newWs = XLSX.utils.aoa_to_sheet(correctedSheetData);
