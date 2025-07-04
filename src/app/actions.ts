@@ -1,6 +1,6 @@
 'use server';
 
-import type { Selection, DataType, DetailedReport, DetailedValidationRow, SpreadsheetData } from '@/types';
+import type { Selection, DataType, DetailedReport, DetailedValidationRow, SpreadsheetData, CorrectedFile } from '@/types';
 import * as XLSX from 'xlsx';
 import { parseCurrency } from '@/lib/utils';
 
@@ -377,4 +377,66 @@ export async function compareAndCorrectAction(
   }
 
   return correctedFiles;
+}
+
+export async function generatePaymentSheetAction(
+  selections: Selection[],
+  primaryWorksheetName: string,
+): Promise<CorrectedFile | null> {
+  const primarySelections = selections.filter(s => s.worksheetName === primaryWorksheetName);
+
+  const nomeCol = primarySelections.find(s => s.role === 'key');
+  const cpfCol = primarySelections.find(s => s.role === 'cpf');
+  const valorCol = primarySelections.find(s => s.role === 'value');
+
+  if (!nomeCol || !cpfCol || !valorCol) {
+    throw new Error('As colunas "Nome (Chave)", "CPF" e "Valor" devem ser selecionadas na planilha principal.');
+  }
+
+  const paymentData: (string | number)[][] = [['Nome', 'CPF', 'Valor']];
+
+  for (let i = 0; i < nomeCol.fullData.length; i++) {
+    const valorStr = valorCol.fullData[i];
+    const valorNum = parseCurrency(valorStr);
+
+    if (!isNaN(valorNum) && valorNum > 0) {
+      const nome = nomeCol.fullData[i];
+      const cpf = cpfCol.fullData[i];
+      paymentData.push([nome, cpf, valorNum]);
+    }
+  }
+
+  if (paymentData.length <= 1) {
+    return null; // No rows with value > 0
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(paymentData);
+
+  // Apply currency format to the 'Valor' column
+  const currencyFormat = 'R$ #,##0.00';
+  Object.keys(ws).forEach(cellAddress => {
+    // Check if the cell is in the third column (C) and not the header
+    if (cellAddress.startsWith('C') && cellAddress !== 'C1') {
+      if (ws[cellAddress]?.v !== undefined) {
+        ws[cellAddress].t = 'n';
+        ws[cellAddress].z = currencyFormat;
+      }
+    }
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Pagamento');
+
+  const date = new Date();
+  const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+  const month = monthNames[date.getMonth()];
+  const year = date.getFullYear();
+  const fileName = `Pagamento ${month} - ${year}.xlsx`;
+
+  const fileContent = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+
+  return {
+    fileName,
+    content: fileContent,
+  };
 }

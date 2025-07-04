@@ -7,14 +7,14 @@ import type { SelectionWithValidation, DetailedReport, SpreadsheetData, Selectio
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppLogo } from '@/components/icons';
-import { ArrowLeft, Search, LoaderCircle, ClipboardCheck, CheckCircle2, XCircle, FilePenLine } from 'lucide-react';
+import { ArrowLeft, Search, LoaderCircle, ClipboardCheck, CheckCircle2, XCircle, FilePenLine, FileSpreadsheet } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { DataTypeIcon } from '@/components/data-type-icon';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from "@/hooks/use-toast";
-import { getDetailedValidationReportAction, compareAndCorrectAction, type ValidationRequest, type ReportOptions } from '@/app/actions';
+import { getDetailedValidationReportAction, compareAndCorrectAction, generatePaymentSheetAction, type ValidationRequest, type ReportOptions } from '@/app/actions';
 import { ValidationResultsDialog } from '@/components/sheetsifter/validation-results-dialog';
 import { OperationOptionsDialog } from '@/components/sheetsifter/operation-options-dialog';
 
@@ -36,6 +36,12 @@ const operations = [
     title: 'Comparar e Corrigir (Baixar Arquivo)',
     description: 'Use uma planilha principal como fonte da verdade. Corrija os valores em outras planilhas e baixe os arquivos corrigidos.',
     icon: FilePenLine,
+  },
+  {
+    id: 'generate-payment-sheet',
+    title: 'Gerar planilha de pagamento',
+    description: 'Gera uma nova planilha (Nome, CPF, Valor) com base nos valores da planilha principal.',
+    icon: FileSpreadsheet,
   },
 ];
 
@@ -178,6 +184,59 @@ export default function OperationsPage() {
     });
   };
 
+  const executeGeneratePaymentSheet = () => {
+    if (!primaryWorksheetName) {
+      toast({ variant: 'destructive', title: 'Nenhuma Planilha Principal', description: 'Por favor, marque uma planilha como principal (usando a estrela).' });
+      return;
+    }
+    
+    const allSelections = Array.from(selections.values());
+    const primarySelections = allSelections.filter(s => s.worksheetName === primaryWorksheetName);
+
+    const hasNome = primarySelections.some(s => s.role === 'key');
+    const hasCPF = primarySelections.some(s => s.role === 'cpf');
+    const hasValor = primarySelections.some(s => s.role === 'value');
+
+    if (!hasNome || !hasCPF || !hasValor) {
+        toast({
+            variant: 'destructive',
+            title: 'Seleção Incompleta',
+            description: 'Para gerar a planilha de pagamento, selecione colunas para "Nome (Chave)", "CPF" e "Valor" na planilha principal.',
+        });
+        return;
+    }
+
+    startExecuting(async () => {
+        try {
+            const paymentFile = await generatePaymentSheetAction(
+                Array.from(selections.values()), 
+                primaryWorksheetName,
+            );
+            
+            if (paymentFile) {
+                const link = document.createElement('a');
+                link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${paymentFile.content}`;
+                link.download = paymentFile.fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                toast({ title: "Planilha Gerada", description: `A planilha "${paymentFile.fileName}" foi baixada.` });
+            } else {
+                toast({ title: "Nenhum Pagamento a Gerar", description: "Nenhuma linha na planilha principal tinha um valor maior que zero." });
+            }
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro durante a geração da planilha.';
+            toast({
+                variant: 'destructive',
+                title: 'Erro na Geração',
+                description: errorMessage,
+            });
+        }
+    });
+  };
+
+
   const executeOperationWithOptions = (options: ReportOptions) => {
     if (!selectedOperation) return;
 
@@ -197,6 +256,11 @@ export default function OperationsPage() {
         title: "Não Implementado",
         description: "A operação PROCV ainda não foi implementada.",
       });
+      return;
+    }
+
+    if (selectedOperation === 'generate-payment-sheet') {
+      executeGeneratePaymentSheet();
       return;
     }
 

@@ -23,7 +23,7 @@ import { Separator } from "@/components/ui/separator";
 
 import { AppLogo } from "@/components/icons";
 import { DataTypeIcon } from "@/components/data-type-icon";
-import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search, KeyRound, TextSelect, Star } from "lucide-react";
+import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search, User, Fingerprint, CircleDollarSign, Star } from "lucide-react";
 
 const dataTypes: DataType[] = ['text', 'number', 'date', 'currency'];
 
@@ -193,7 +193,7 @@ export default function SheetSifterApp() {
     }
   };
 
-  const handleRoleChange = (key: string, role: 'key' | 'value') => {
+  const handleRoleChange = (key: string, role: 'key' | 'value' | 'cpf') => {
     const newSelections = new Map(selections);
     const selection = newSelections.get(key);
     if (selection) {
@@ -483,22 +483,28 @@ export default function SheetSifterApp() {
                                                     <TableCell>
                                                         <Select
                                                             value={selection?.role}
-                                                            onValueChange={(value) => handleRoleChange(key, value as 'key' | 'value')}
+                                                            onValueChange={(value) => handleRoleChange(key, value as 'key' | 'value' | 'cpf')}
                                                             disabled={!selection}
                                                         >
-                                                            <SelectTrigger className="w-[150px]">
+                                                            <SelectTrigger className="w-[180px]">
                                                                 <SelectValue placeholder="Select role..." />
                                                             </SelectTrigger>
                                                             <SelectContent>
                                                                 <SelectItem value="key">
                                                                     <div className="flex items-center gap-2">
-                                                                        <KeyRound className="h-4 w-4 text-muted-foreground"/>
-                                                                        <span>Chave</span>
+                                                                        <User className="h-4 w-4 text-muted-foreground"/>
+                                                                        <span>Nome (Chave)</span>
+                                                                    </div>
+                                                                </SelectItem>
+                                                                <SelectItem value="cpf">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Fingerprint className="h-4 w-4 text-muted-foreground"/>
+                                                                        <span>CPF</span>
                                                                     </div>
                                                                 </SelectItem>
                                                                 <SelectItem value="value">
                                                                     <div className="flex items-center gap-2">
-                                                                        <TextSelect className="h-4 w-4 text-muted-foreground"/>
+                                                                        <CircleDollarSign className="h-4 w-4 text-muted-foreground"/>
                                                                         <span>Valor</span>
                                                                     </div>
                                                                 </SelectItem>

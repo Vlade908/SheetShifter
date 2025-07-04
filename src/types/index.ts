@@ -22,7 +22,7 @@ export interface Selection {
   worksheetName: string;
   columnName: string;
   dataType: DataType;
-  role?: 'key' | 'value';
+  role?: 'key' | 'value' | 'cpf';
   sampleData: string[];
   fullData: string[];
 }
