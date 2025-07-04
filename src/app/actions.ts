@@ -461,7 +461,7 @@ export async function updatePaymentSheetAction(
   const sourcePayments = new Map<string, { cpf: string, value: number }>();
   for (let i = 0; i < nomeCol.fullData.length; i++) {
     const valorNum = parseCurrency(valorCol.fullData[i]);
-    if (!isNaN(valorNum) && valorNum > 0) {
+    if (!isNaN(valorNum) && valorNum >= 10) {
       const nome = nomeCol.fullData[i];
       const cpf = cpfCol.fullData[i];
       if (nome) {
