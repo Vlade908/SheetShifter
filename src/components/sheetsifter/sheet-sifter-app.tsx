@@ -20,7 +20,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 import { AppLogo } from "@/components/icons";
 import { DataTypeIcon } from "@/components/data-type-icon";
-import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, AlertCircle, RefreshCw } from "lucide-react";
+import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, AlertCircle, RefreshCw, Search } from "lucide-react";
 
 const dataTypes: DataType[] = ['text', 'number', 'date', 'currency'];
 
@@ -57,6 +57,7 @@ export default function SheetSifterApp() {
   const [step, setStep] = useState<"upload" | "selection">("upload");
   const [spreadsheetData, setSpreadsheetData] = useState<SpreadsheetData | null>(null);
   const [selections, setSelections] = useState<Map<string, SelectionWithValidation>>(new Map());
+  const [searchTerm, setSearchTerm] = useState("");
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -288,30 +289,46 @@ export default function SheetSifterApp() {
               <Tabs defaultValue={spreadsheetData?.worksheets[0]?.name} className="w-full">
                 <ScrollArea className="w-full">
                     <TabsList>
-                      {spreadsheetData?.worksheets.map((worksheet) => (
-                        <TabsTrigger value={worksheet.name} key={worksheet.name}>
+                      {spreadsheetData?.worksheets.map((worksheet) => {
+                        const hasSelections = Array.from(selections.keys()).some(k => k.startsWith(`${worksheet.name}-`));
+                        return(
+                        <TabsTrigger value={worksheet.name} key={worksheet.name} className="relative">
                           <Sheet className="mr-2 h-4 w-4" />
                           {worksheet.name}
+                          {hasSelections && (
+                            <span className="ml-2 h-2 w-2 rounded-full bg-primary" />
+                          )}
                         </TabsTrigger>
-                      ))}
+                      )})}
                     </TabsList>
                     <ScrollBar orientation="horizontal" />
                 </ScrollArea>
                 {spreadsheetData?.worksheets.map((worksheet) => (
                   <TabsContent value={worksheet.name} key={worksheet.name} className="mt-4">
-                     <div className="flex items-center gap-3 my-4 p-3 bg-secondary/50 rounded-lg">
-                      <Label htmlFor={`header-row-${worksheet.name}`} className="text-sm font-medium">
-                        Header Row
-                      </Label>
-                      <Input
-                        id={`header-row-${worksheet.name}`}
-                        type="number"
-                        min="1"
-                        className="w-24 h-9"
-                        value={worksheet.headerRow}
-                        onChange={(e) => handleHeaderRowChange(worksheet.name, parseInt(e.target.value, 10))}
-                      />
-                       <p className="text-sm text-muted-foreground">Specify which row contains your column names.</p>
+                     <div className="flex flex-col md:flex-row items-center justify-between gap-4 my-4">
+                        <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg w-full md:w-auto flex-grow">
+                            <Label htmlFor={`header-row-${worksheet.name}`} className="text-sm font-medium shrink-0">
+                                Header Row
+                            </Label>
+                            <Input
+                                id={`header-row-${worksheet.name}`}
+                                type="number"
+                                min="1"
+                                className="w-24 h-9"
+                                value={worksheet.headerRow}
+                                onChange={(e) => handleHeaderRowChange(worksheet.name, parseInt(e.target.value, 10))}
+                            />
+                            <p className="text-sm text-muted-foreground">Specify which row contains your column names.</p>
+                        </div>
+                        <div className="relative w-full md:w-72">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search columns..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-10 h-9"
+                            />
+                        </div>
                     </div>
 
                     <div className="border rounded-md overflow-hidden">
@@ -325,15 +342,20 @@ export default function SheetSifterApp() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {worksheet.columns.map((column, index) => {
-                                    const key = `${worksheet.name}-${index}`;
+                                {worksheet.columns
+                                    .map((column, index) => ({ column, originalIndex: index }))
+                                    .filter(({ column }) =>
+                                        column.name.toLowerCase().includes(searchTerm.toLowerCase())
+                                    )
+                                    .map(({ column, originalIndex }) => {
+                                    const key = `${worksheet.name}-${originalIndex}`;
                                     const selection = selections.get(key);
                                     return (
                                         <TableRow key={key} className={selection ? 'bg-primary/5' : ''}>
                                             <TableCell>
                                                 <Checkbox
                                                     checked={!!selection}
-                                                    onCheckedChange={(checked) => handleToggleSelection(worksheet.name, column, index, !!checked)}
+                                                    onCheckedChange={(checked) => handleToggleSelection(worksheet.name, column, originalIndex, !!checked)}
                                                 />
                                             </TableCell>
                                             <TableCell className="font-medium">{column.name}</TableCell>
