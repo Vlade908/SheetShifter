@@ -78,70 +78,75 @@ export default function SheetSifterApp() {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    setIsProcessingFile(true);
-
-    const filePromises = Array.from(files).map(file => {
-      return new Promise<SpreadsheetData>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          try {
-            const data = e.target?.result;
-            const workbook = XLSX.read(data, { type: 'array' });
-            const defaultHeaderRow = 2;
-
-            const worksheets: Worksheet[] = workbook.SheetNames.map(sheetName => {
-                const worksheet = workbook.Sheets[sheetName];
-                const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                
-                return { 
-                  name: sheetName, 
-                  columns: extractColumns(jsonData, defaultHeaderRow),
-                  data: jsonData,
-                  headerRow: defaultHeaderRow,
-                };
-            });
-
-            resolve({
-              fileName: file.name,
-              worksheets,
-            });
-          } catch (error) {
-            reject(new Error(`Error processing file ${file.name}: ${error}`));
-          }
-        };
-        reader.onerror = () => {
-          reject(new Error(`Could not read file ${file.name}`));
-        };
-        reader.readAsArrayBuffer(file);
-      });
+    startTransition(() => {
+        setIsProcessingFile(true);
     });
 
-    try {
-      const newSpreadsheetData = await Promise.all(filePromises);
-      const allSpreadsheets = [...spreadsheetData, ...newSpreadsheetData];
-      setSpreadsheetData(allSpreadsheets);
-      
-      if (!primaryWorksheet && allSpreadsheets.length > 0 && allSpreadsheets[0].worksheets.length > 0) {
-        setPrimaryWorksheet({
-          fileName: allSpreadsheets[0].fileName,
-          worksheetName: allSpreadsheets[0].worksheets[0].name,
-        });
-      }
-      setStep("selection");
+    // Timeout to allow UI to update before heavy processing
+    setTimeout(async () => {
+        const filePromises = Array.from(files).map(file => {
+        return new Promise<SpreadsheetData>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+            try {
+                const data = e.target?.result;
+                const workbook = XLSX.read(data, { type: 'array' });
+                const defaultHeaderRow = 2;
 
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      toast({
-          variant: "destructive",
-          title: "Erro ao Processar Arquivo",
-          description: errorMessage,
-      });
-    } finally {
-      setIsProcessingFile(false);
-      if(event.target) {
-        event.target.value = '';
-      }
-    }
+                const worksheets: Worksheet[] = workbook.SheetNames.map(sheetName => {
+                    const worksheet = workbook.Sheets[sheetName];
+                    const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    
+                    return { 
+                    name: sheetName, 
+                    columns: extractColumns(jsonData, defaultHeaderRow),
+                    data: jsonData,
+                    headerRow: defaultHeaderRow,
+                    };
+                });
+
+                resolve({
+                fileName: file.name,
+                worksheets,
+                });
+            } catch (error) {
+                reject(new Error(`Error processing file ${file.name}: ${error}`));
+            }
+            };
+            reader.onerror = () => {
+            reject(new Error(`Could not read file ${file.name}`));
+            };
+            reader.readAsArrayBuffer(file);
+        });
+        });
+
+        try {
+        const newSpreadsheetData = await Promise.all(filePromises);
+        const allSpreadsheets = [...spreadsheetData, ...newSpreadsheetData];
+        setSpreadsheetData(allSpreadsheets);
+        
+        if (!primaryWorksheet && allSpreadsheets.length > 0 && allSpreadsheets[0].worksheets.length > 0) {
+            setPrimaryWorksheet({
+            fileName: allSpreadsheets[0].fileName,
+            worksheetName: allSpreadsheets[0].worksheets[0].name,
+            });
+        }
+        setStep("selection");
+
+        } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        toast({
+            variant: "destructive",
+            title: "Erro ao Processar Arquivo",
+            description: errorMessage,
+        });
+        } finally {
+        setIsProcessingFile(false);
+        if(event.target) {
+            event.target.value = '';
+        }
+        }
+    }, 50);
   };
 
   const handleUploadClick = () => {
@@ -363,9 +368,9 @@ export default function SheetSifterApp() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Accordion type="multiple" defaultValue={spreadsheetData.map(f => f.fileName)} className="w-full">
-                {spreadsheetData.map((file) => (
-                  <AccordionItem value={file.fileName} key={file.fileName}>
+              <Accordion type="multiple" defaultValue={spreadsheetData.map((f, i) => `${f.fileName}-${i}`)} className="w-full">
+                {spreadsheetData.map((file, fileIndex) => (
+                  <AccordionItem value={`${file.fileName}-${fileIndex}`} key={`${file.fileName}-${fileIndex}`}>
                     <AccordionTrigger>
                       <div className="flex items-center gap-2">
                         <FileText className="h-5 w-5 text-primary" />
