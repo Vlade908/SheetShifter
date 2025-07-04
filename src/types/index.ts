@@ -3,6 +3,7 @@ export type DataType = 'text' | 'number' | 'date' | 'currency';
 export interface Column {
   name: string;
   sampleData: string[];
+  fullData: string[];
 }
 
 export interface Worksheet {
@@ -22,6 +23,7 @@ export interface Selection {
   columnName: string;
   dataType: DataType;
   sampleData: string[];
+  fullData: string[];
 }
 
 export interface ValidationResult {

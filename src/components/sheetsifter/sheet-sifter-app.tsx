@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import React, { useState, useTransition, useRef } from "react";
 import * as XLSX from 'xlsx';
 import type { DataType, SelectionWithValidation, SpreadsheetData, Worksheet, Column } from "@/types";
 import { validateSelectionsAction, type ValidationRequest } from "@/app/actions";
@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 
 import { AppLogo } from "@/components/icons";
 import { DataTypeIcon } from "@/components/data-type-icon";
@@ -28,26 +29,30 @@ function extractColumns(data: any[][], headerRow: number): Column[] {
   if (data.length < headerRow) {
     return [];
   }
-  // Convert 1-based headerRow to 0-based index
   const headerIndex = headerRow - 1;
 
   const headers = data[headerIndex] as string[];
   if (!headers) return [];
 
-  const sampleDataRows = data.slice(headerIndex + 1);
+  const dataRows = data.slice(headerIndex + 1);
 
   const columns: Column[] = headers
     .map((header, index) => {
-      const sampleData = sampleDataRows
+      const fullData = dataRows.map(row =>
+        row[index] !== undefined && row[index] !== null ? String(row[index]) : ""
+      );
+
+      const sampleData = fullData
         .slice(0, 3)
-        .map(row => (row[index] !== undefined && row[index] !== null ? String(row[index]) : ""))
-        .filter(val => val !== "");
+        .filter(val => val.trim() !== ""); 
+
       return {
-        name: String(header || `Column ${index + 1}`), // Use index for empty headers
+        name: String(header || `Column ${index + 1}`),
         sampleData,
+        fullData,
       };
     })
-    .filter(column => column.name); // Filter out empty header columns
+    .filter(column => column.name);
 
   return columns;
 }
@@ -158,6 +163,7 @@ export default function SheetSifterApp() {
         worksheetName,
         columnName: column.name,
         sampleData: column.sampleData || [],
+        fullData: column.fullData || [],
         dataType: 'text',
         isValidating: false,
       });
@@ -342,65 +348,104 @@ export default function SheetSifterApp() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {worksheet.columns
-                                    .map((column, index) => ({ column, originalIndex: index }))
-                                    .filter(({ column }) =>
+                                {(() => {
+                                    const allColumnsWithIndex = worksheet.columns.map((column, index) => ({ column, originalIndex: index }));
+                                    
+                                    const filteredColumns = allColumnsWithIndex.filter(({ column }) =>
                                         column.name.toLowerCase().includes(searchTerm.toLowerCase())
-                                    )
-                                    .map(({ column, originalIndex }) => {
-                                    const key = `${worksheet.name}-${originalIndex}`;
-                                    const selection = selections.get(key);
-                                    return (
-                                        <TableRow key={key} className={selection ? 'bg-primary/5' : ''}>
-                                            <TableCell>
-                                                <Checkbox
-                                                    checked={!!selection}
-                                                    onCheckedChange={(checked) => handleToggleSelection(worksheet.name, column, originalIndex, !!checked)}
-                                                />
-                                            </TableCell>
-                                            <TableCell className="font-medium">{column.name}</TableCell>
-                                            <TableCell>
-                                                <Select
-                                                    value={selection?.dataType}
-                                                    onValueChange={(value) => handleDataTypeChange(key, value as DataType)}
-                                                    disabled={!selection}
-                                                >
-                                                    <SelectTrigger className="w-[180px]">
-                                                        <SelectValue placeholder="Select type..." />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {dataTypes.map((type) => (
-                                                            <SelectItem key={type} value={type}>
-                                                                <div className="flex items-center gap-2">
-                                                                    <DataTypeIcon type={type} className="h-4 w-4 text-muted-foreground"/>
-                                                                    <span className="capitalize">{type}</span>
-                                                                </div>
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                {selection?.isValidating ? (
-                                                    <LoaderCircle className="h-5 w-5 animate-spin text-primary inline-block" />
-                                                ) : selection?.validationResult ? (
-                                                    <Tooltip>
-                                                        <TooltipTrigger>
-                                                            {selection.validationResult.isValid ? (
-                                                                <CheckCircle2 className="h-5 w-5 text-green-600 inline-block" />
-                                                            ) : (
-                                                                <XCircle className="h-5 w-5 text-red-600 inline-block" />
-                                                            )}
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            <p className="max-w-xs">{selection.validationResult.reason}</p>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                ) : null}
-                                            </TableCell>
-                                        </TableRow>
                                     );
-                                })}
+                                    
+                                    const [selectedColumns, unselectedColumns] = filteredColumns.reduce<[typeof filteredColumns, typeof filteredColumns]>(
+                                        (acc, item) => {
+                                            const key = `${worksheet.name}-${item.originalIndex}`;
+                                            if (selections.has(key)) {
+                                                acc[0].push(item);
+                                            } else {
+                                                acc[1].push(item);
+                                            }
+                                            return acc;
+                                        },
+                                        [[], []]
+                                    );
+
+                                    const displayedColumns = [...selectedColumns, ...unselectedColumns];
+
+                                    if (displayedColumns.length === 0) {
+                                        return (
+                                            <TableRow>
+                                                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                                                    No columns match your search.
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    }
+
+                                    return displayedColumns.map(({ column, originalIndex }, index) => {
+                                        const key = `${worksheet.name}-${originalIndex}`;
+                                        const selection = selections.get(key);
+                                        const isFirstUnselected = index === selectedColumns.length;
+
+                                        return (
+                                            <React.Fragment key={key}>
+                                                {isFirstUnselected && selectedColumns.length > 0 && unselectedColumns.length > 0 && (
+                                                    <TableRow className="hover:bg-transparent">
+                                                        <TableCell colSpan={4} className="py-2 px-0">
+                                                            <Separator />
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )}
+                                                <TableRow className={selection ? 'bg-primary/5' : ''}>
+                                                    <TableCell>
+                                                        <Checkbox
+                                                            checked={!!selection}
+                                                            onCheckedChange={(checked) => handleToggleSelection(worksheet.name, column, originalIndex, !!checked)}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="font-medium">{column.name}</TableCell>
+                                                    <TableCell>
+                                                        <Select
+                                                            value={selection?.dataType}
+                                                            onValueChange={(value) => handleDataTypeChange(key, value as DataType)}
+                                                            disabled={!selection}
+                                                        >
+                                                            <SelectTrigger className="w-[180px]">
+                                                                <SelectValue placeholder="Select type..." />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {dataTypes.map((type) => (
+                                                                    <SelectItem key={type} value={type}>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <DataTypeIcon type={type} className="h-4 w-4 text-muted-foreground"/>
+                                                                            <span className="capitalize">{type}</span>
+                                                                        </div>
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        {selection?.isValidating ? (
+                                                            <LoaderCircle className="h-5 w-5 animate-spin text-primary inline-block" />
+                                                        ) : selection?.validationResult ? (
+                                                            <Tooltip>
+                                                                <TooltipTrigger>
+                                                                    {selection.validationResult.isValid ? (
+                                                                        <CheckCircle2 className="h-5 w-5 text-green-600 inline-block" />
+                                                                    ) : (
+                                                                        <XCircle className="h-5 w-5 text-red-600 inline-block" />
+                                                                    )}
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p className="max-w-xs">{selection.validationResult.reason}</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        ) : null}
+                                                    </TableCell>
+                                                </TableRow>
+                                            </React.Fragment>
+                                        );
+                                    });
+                                })()}
                             </TableBody>
                         </Table>
                     </div>
