@@ -7,7 +7,7 @@ import type { SelectionWithValidation } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppLogo } from '@/components/icons';
-import { ArrowLeft, Search, LoaderCircle } from 'lucide-react';
+import { ArrowLeft, Search, LoaderCircle, ClipboardCheck } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { DataTypeIcon } from '@/components/data-type-icon';
@@ -17,8 +17,14 @@ const operations = [
   {
     id: 'vlookup',
     title: 'PROCV (VLOOKUP)',
-    description: 'Encontre e exiba dados relacionados de várias colunas selecionadas.',
+    description: 'Encontre e exiba dados relacionados de várias colunas. Esta operação é executada em segundo plano.',
     icon: Search,
+  },
+  {
+    id: 'check-values',
+    title: 'Verificar Valores',
+    description: 'Use uma coluna como chave (ex: nome do aluno) para validar os dados em outra coluna da mesma tabela.',
+    icon: ClipboardCheck,
   },
 ];
 
