@@ -134,6 +134,7 @@ function runComparisonValidation(requests: ValidationRequest[]): DetailedReport[
             return {
                 rowIndex: index,
                 value: value,
+                sourceValue: sourceValue,
                 isValid,
             };
         });

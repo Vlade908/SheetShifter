@@ -40,6 +40,7 @@ export interface SelectionWithValidation extends Selection {
 export interface DetailedValidationRow {
   rowIndex: number;
   value: string;
+  sourceValue?: string;
   isValid: boolean;
 }
 

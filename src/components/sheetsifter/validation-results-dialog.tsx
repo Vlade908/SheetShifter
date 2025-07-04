@@ -61,7 +61,8 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports }: Valid
                         <TableHeader>
                         <TableRow>
                             <TableHead className="w-[100px]">Linha</TableHead>
-                            <TableHead>Valor</TableHead>
+                            <TableHead>Valor (Fonte)</TableHead>
+                            <TableHead>Valor (Atual)</TableHead>
                             <TableHead className="w-[150px] text-center">Status</TableHead>
                         </TableRow>
                         </TableHeader>
@@ -69,6 +70,7 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports }: Valid
                         {report.results.map(row => (
                             <TableRow key={row.rowIndex}>
                             <TableCell>{row.rowIndex + 1}</TableCell>
+                            <TableCell className="font-mono text-xs">{row.sourceValue !== undefined ? row.sourceValue : <span className="text-muted-foreground italic">Não encontrado</span>}</TableCell>
                             <TableCell className="font-mono text-xs">{row.value || <span className="text-muted-foreground italic">Vazio</span>}</TableCell>
                             <TableCell className="text-center">
                                 {row.isValid ? (
