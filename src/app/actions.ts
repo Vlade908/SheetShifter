@@ -24,6 +24,8 @@ export interface CorrectedFile {
     content: string; // base64 encoded
 }
 
+type PrimaryWorksheet = { fileName: string, worksheetName: string };
+
 function validateSample(sample: string, dataType: DataType): boolean {
     if (sample === null || sample === undefined || sample === '') return true;
 
@@ -94,27 +96,17 @@ export async function validateSelectionsAction(
 }
 
 
-function runComparisonValidation(requests: ValidationRequest[], options: ReportOptions): DetailedReport[] {
+function runComparisonValidation(requests: ValidationRequest[], primaryWorksheet: PrimaryWorksheet, options: ReportOptions): DetailedReport[] {
     const selections = requests.map(r => r.selection);
     
-    const selectionsByWorksheet = selections.reduce((acc, sel) => {
-        if (!acc[sel.worksheetName]) {
-            acc[sel.worksheetName] = { keys: [], values: [] };
-        }
-        if (sel.role === 'key') acc[sel.worksheetName].keys.push(sel);
-        if (sel.role === 'value') acc[sel.worksheetName].values.push(sel);
-        return acc;
-    }, {} as Record<string, { keys: Selection[], values: Selection[] }>);
-
-    const worksheetPairs = Object.values(selectionsByWorksheet).filter(ws => ws.keys.length > 0 && ws.values.length > 0);
-
-    if (worksheetPairs.length < 2) {
-        throw new Error("Para comparação, selecione colunas Chave e Valor em pelo menos duas planilhas.");
+    const primarySelections = selections.filter(s => s.fileName === primaryWorksheet.fileName && s.worksheetName === primaryWorksheet.worksheetName);
+    const sourceKeyCol = primarySelections.find(s => s.role === 'key');
+    const sourceValueCol = primarySelections.find(s => s.role === 'value');
+    
+    if (!sourceKeyCol || !sourceValueCol) {
+        throw new Error("A planilha principal deve ter colunas Chave e Valor selecionadas para comparação.");
     }
-
-    const sourceWs = worksheetPairs[0];
-    const sourceKeyCol = sourceWs.keys[0];
-    const sourceValueCol = sourceWs.values[0];
+    
     const sourceMap = new Map<string, string>();
     for (let i = 0; i < sourceKeyCol.fullData.length; i++) {
         const key = sourceKeyCol.fullData[i];
@@ -122,13 +114,14 @@ function runComparisonValidation(requests: ValidationRequest[], options: ReportO
             sourceMap.set(key, sourceValueCol.fullData[i]);
         }
     }
-    
+
+    const targetSelections = selections.filter(s => s.role === 'value' && (s.fileName !== primaryWorksheet.fileName || s.worksheetName !== primaryWorksheet.worksheetName));
+
     const reports: DetailedReport[] = [];
     
-    for (let i = 1; i < worksheetPairs.length; i++) {
-        const targetWs = worksheetPairs[i];
-        const targetKeyCol = targetWs.keys[0];
-        const targetValueCol = targetWs.values[0];
+    for (const targetValueCol of targetSelections) {
+        const targetKeyCol = selections.find(s => s.fileName === targetValueCol.fileName && s.worksheetName === targetValueCol.worksheetName && s.role === 'key');
+        if (!targetKeyCol) continue;
         
         const targetKeyCounts = new Map<string, number>();
         for (const key of targetKeyCol.fullData) {
@@ -172,7 +165,8 @@ function runComparisonValidation(requests: ValidationRequest[], options: ReportO
         const invalidRows = totalRows - validRows;
 
         reports.push({
-            key: `${targetValueCol.worksheetName}-${targetValueCol.columnName}`,
+            key: `${targetValueCol.fileName}-${targetValueCol.worksheetName}-${targetValueCol.columnName}`,
+            fileName: targetValueCol.fileName,
             columnName: targetValueCol.columnName,
             worksheetName: targetValueCol.worksheetName,
             keyColumnName: targetKeyCol.columnName,
@@ -198,7 +192,7 @@ function runComparisonValidation(requests: ValidationRequest[], options: ReportO
 function runDataTypeValidation(requests: ValidationRequest[]): DetailedReport[] {
     const reports: DetailedReport[] = requests.map(request => {
       const { key, selection } = request;
-      const { columnName, worksheetName, dataType, fullData } = selection;
+      const { fileName, columnName, worksheetName, dataType, fullData } = selection;
   
       let validRows = 0;
       const results: DetailedValidationRow[] = fullData.map((value, index) => {
@@ -218,6 +212,7 @@ function runDataTypeValidation(requests: ValidationRequest[]): DetailedReport[] 
   
       return {
         key,
+        fileName,
         columnName,
         worksheetName,
         results,
@@ -236,28 +231,29 @@ function runDataTypeValidation(requests: ValidationRequest[]): DetailedReport[] 
 
 export async function getDetailedValidationReportAction(
   requests: ValidationRequest[],
+  primaryWorksheet: PrimaryWorksheet,
   options: ReportOptions = {}
 ): Promise<DetailedReport[]> {
     const hasRoles = requests.some(r => r.selection.role);
     if (hasRoles) {
-        return runComparisonValidation(requests, options);
+        return runComparisonValidation(requests, primaryWorksheet, options);
     }
     return runDataTypeValidation(requests);
 }
 
 export async function compareAndCorrectAction(
-  spreadsheetData: SpreadsheetData,
+  spreadsheetData: SpreadsheetData[],
   selections: Selection[],
-  primaryWorksheetName: string,
+  primaryWorksheet: PrimaryWorksheet,
   targetWorksheetName?: string,
   options: ReportOptions = {}
 ): Promise<CorrectedFile[]> {
-  const primarySelections = selections.filter(s => s.worksheetName === primaryWorksheetName);
+  const primarySelections = selections.filter(s => s.fileName === primaryWorksheet.fileName && s.worksheetName === primaryWorksheet.worksheetName);
   const primaryKeyCol = primarySelections.find(s => s.role === 'key');
   const primaryValueCol = primarySelections.find(s => s.role === 'value');
 
   if (!primaryKeyCol || !primaryValueCol) {
-    throw new Error(`A planilha principal '${primaryWorksheetName}' deve ter uma coluna Chave e uma Valor selecionadas.`);
+    throw new Error(`A planilha principal '${primaryWorksheet.fileName} > ${primaryWorksheet.worksheetName}' deve ter uma coluna Chave e uma Valor selecionadas.`);
   }
 
   const sourceMap = new Map<string, string>();
@@ -269,20 +265,25 @@ export async function compareAndCorrectAction(
   }
 
   const correctedFiles: CorrectedFile[] = [];
-  const secondaryWorksheetNames = targetWorksheetName
-    ? [targetWorksheetName]
-    : [...new Set(
-        selections
-          .filter(s => s.worksheetName !== primaryWorksheetName && s.role)
-          .map(s => s.worksheetName)
-      )];
+  
+  const targetIdentifiers = [...new Set(
+      selections
+        .filter(s => s.role && (s.fileName !== primaryWorksheet.fileName || s.worksheetName !== primaryWorksheet.worksheetName))
+        .map(s => JSON.stringify({ fileName: s.fileName, worksheetName: s.worksheetName }))
+    )].map(s => JSON.parse(s) as { fileName: string, worksheetName: string });
+  
+  const secondaryWorksheetIdentifiers = targetWorksheetName
+    ? targetIdentifiers.filter(id => id.worksheetName === targetWorksheetName)
+    : targetIdentifiers;
 
 
-  for (const wsName of secondaryWorksheetNames) {
-    const targetWorksheet = spreadsheetData.worksheets.find(ws => ws.name === wsName);
+  for (const identifier of secondaryWorksheetIdentifiers) {
+    const { fileName, worksheetName } = identifier;
+    const targetSpreadsheet = spreadsheetData.find(s => s.fileName === fileName);
+    const targetWorksheet = targetSpreadsheet?.worksheets.find(ws => ws.name === worksheetName);
     if (!targetWorksheet) continue;
 
-    const targetSelections = selections.filter(s => s.worksheetName === wsName);
+    const targetSelections = selections.filter(s => s.fileName === fileName && s.worksheetName === worksheetName);
     const targetKeyCol = targetSelections.find(s => s.role === 'key');
     const targetValueCol = targetSelections.find(s => s.role === 'value');
 
@@ -293,14 +294,13 @@ export async function compareAndCorrectAction(
     const valueColIndex = headerRowArray.findIndex(h => h === targetValueCol.columnName);
 
     if (keyColIndex === -1 || valueColIndex === -1) {
-      console.warn(`Não foi possível encontrar as colunas Chave/Valor na planilha ${wsName}`);
+      console.warn(`Não foi possível encontrar as colunas Chave/Valor na planilha ${fileName} > ${worksheetName}`);
       continue;
     }
     
     const originalData = targetWorksheet.data;
     const dataRows = originalData.slice(targetWorksheet.headerRow);
 
-    // Group rows by key to handle duplicates
     const groupedRows = new Map<string, { row: any[] }[]>();
     dataRows.forEach((row) => {
         const key = row[keyColIndex];
@@ -365,12 +365,12 @@ export async function compareAndCorrectAction(
       const correctedSheetData = [headerRowArray, ...finalRows];
       const newWs = XLSX.utils.aoa_to_sheet(correctedSheetData, { cellDates: true });
       const newWb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(newWb, newWs, wsName);
+      XLSX.utils.book_append_sheet(newWb, newWs, worksheetName);
       
       const fileContent = XLSX.write(newWb, { bookType: 'xlsx', type: 'base64' });
       
       correctedFiles.push({
-        fileName: `${spreadsheetData.fileName.replace(/\.[^/.]+$/, "")}_${wsName}_corrigido.xlsx`,
+        fileName: `${fileName.replace(/\.[^/.]+$/, "")}_${worksheetName}_corrigido.xlsx`,
         content: fileContent
       });
     }
@@ -381,9 +381,9 @@ export async function compareAndCorrectAction(
 
 export async function generatePaymentSheetAction(
   selections: Selection[],
-  primaryWorksheetName: string,
+  primaryWorksheet: PrimaryWorksheet,
 ): Promise<CorrectedFile | null> {
-  const primarySelections = selections.filter(s => s.worksheetName === primaryWorksheetName);
+  const primarySelections = selections.filter(s => s.fileName === primaryWorksheet.fileName && s.worksheetName === primaryWorksheet.worksheetName);
 
   const nomeCol = primarySelections.find(s => s.role === 'key');
   const cpfCol = primarySelections.find(s => s.role === 'cpf');
@@ -412,10 +412,8 @@ export async function generatePaymentSheetAction(
 
   const ws = XLSX.utils.aoa_to_sheet(paymentData);
 
-  // Apply currency format to the 'Valor' column
   const currencyFormat = 'R$ #,##0.00';
   Object.keys(ws).forEach(cellAddress => {
-    // Check if the cell is in the third column (C) and not the header
     if (cellAddress.startsWith('C') && cellAddress !== 'C1') {
       if (ws[cellAddress]?.v !== undefined) {
         ws[cellAddress].t = 'n';
@@ -444,12 +442,11 @@ export async function generatePaymentSheetAction(
 
 export async function updatePaymentSheetAction(
   selections: Selection[],
-  primaryWorksheetName: string,
+  primaryWorksheet: PrimaryWorksheet,
   existingSheetBase64: string,
   existingSheetFileName: string,
 ): Promise<CorrectedFile> {
-  // 1. Parse main sheet data
-  const primarySelections = selections.filter(s => s.worksheetName === primaryWorksheetName);
+  const primarySelections = selections.filter(s => s.fileName === primaryWorksheet.fileName && s.worksheetName === primaryWorksheet.worksheetName);
   const nomeCol = primarySelections.find(s => s.role === 'key');
   const cpfCol = primarySelections.find(s => s.role === 'cpf');
   const valorCol = primarySelections.find(s => s.role === 'value');
@@ -470,7 +467,6 @@ export async function updatePaymentSheetAction(
     }
   }
 
-  // 2. Parse existing payment sheet
   const workbook = XLSX.read(Buffer.from(existingSheetBase64, 'base64'), { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
@@ -495,7 +491,6 @@ export async function updatePaymentSheetAction(
       }
   }
 
-  // 3. Find new entries
   const newRows: (string | number)[][] = [];
   sourcePayments.forEach((data, name) => {
     if (!existingNames.has(name)) {
@@ -503,17 +498,14 @@ export async function updatePaymentSheetAction(
     }
   });
 
-  // 4. Check for updates
   if (newRows.length === 0) {
     throw new Error('Nenhuma atualização necessária. Todos os nomes já estão na planilha de pagamento.');
   }
 
-  // 5. Create new file content
   const updatedData = [...existingData, ...newRows];
   
   const newWs = XLSX.utils.aoa_to_sheet(updatedData);
 
-  // Apply currency format
   const currencyFormat = 'R$ #,##0.00';
   const valorHeader = String(updatedData[0].find(h => String(h).toLowerCase() === 'valor')).toLowerCase();
   const valueColIndex = updatedData[0].map(h => String(h).toLowerCase()).indexOf(valorHeader);

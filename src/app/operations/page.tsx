@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useTransition, useRef } from 'react';
@@ -7,7 +6,7 @@ import type { SelectionWithValidation, DetailedReport, SpreadsheetData, Selectio
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppLogo } from '@/components/icons';
-import { ArrowLeft, Search, LoaderCircle, ClipboardCheck, CheckCircle2, XCircle, FilePenLine, FileSpreadsheet, ListChecks, Upload } from 'lucide-react';
+import { ArrowLeft, Search, LoaderCircle, ClipboardCheck, CheckCircle2, XCircle, FilePenLine, FileSpreadsheet, ListChecks, Upload, FileText } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { DataTypeIcon } from '@/components/data-type-icon';
@@ -51,12 +50,14 @@ const operations = [
   },
 ];
 
+type PrimaryWorksheet = { fileName: string, worksheetName: string };
+
 export default function OperationsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [selections, setSelections] = useState<Map<string, SelectionWithValidation>>(new Map());
-  const [spreadsheetData, setSpreadsheetData] = useState<SpreadsheetData | null>(null);
-  const [primaryWorksheetName, setPrimaryWorksheetName] = useState<string | null>(null);
+  const [spreadsheetData, setSpreadsheetData] = useState<SpreadsheetData[]>([]);
+  const [primaryWorksheet, setPrimaryWorksheet] = useState<PrimaryWorksheet | null>(null);
   const [selectedOperation, setSelectedOperation] = useState<string | null>(null);
   const [isExecuting, startExecuting] = useTransition();
   const [isModalOpen, setModalOpen] = useState(false);
@@ -71,7 +72,7 @@ export default function OperationsPage() {
     try {
       const storedSelections = sessionStorage.getItem('selections');
       const storedSpreadsheetData = sessionStorage.getItem('spreadsheetData');
-      const storedPrimaryWorksheet = sessionStorage.getItem('primaryWorksheetName');
+      const storedPrimaryWorksheet = sessionStorage.getItem('primaryWorksheet');
 
       if (storedSelections) {
         const parsedSelections: [string, SelectionWithValidation][] = JSON.parse(storedSelections);
@@ -84,7 +85,7 @@ export default function OperationsPage() {
         setSpreadsheetData(JSON.parse(storedSpreadsheetData));
       }
       if (storedPrimaryWorksheet) {
-        setPrimaryWorksheetName(storedPrimaryWorksheet);
+        setPrimaryWorksheet(JSON.parse(storedPrimaryWorksheet));
       }
 
     } catch (error) {
@@ -94,14 +95,15 @@ export default function OperationsPage() {
   }, [router]);
 
   const handleStartOver = () => {
-    sessionStorage.removeItem('selections');
-    sessionStorage.removeItem('spreadsheetData');
-    sessionStorage.removeItem('primaryWorksheetName');
+    sessionStorage.clear();
     router.push('/');
   };
 
   const executeCompareReportOnly = (options: ReportOptions) => {
-    setReportOptions(options);
+    if (!primaryWorksheet) {
+      toast({ variant: 'destructive', title: 'Nenhuma Planilha Principal', description: 'Volte e marque uma planilha como principal.' });
+      return;
+    }
     startExecuting(async () => {
       const requests: ValidationRequest[] = Array.from(selections.entries()).map(
         ([key, selection]) => ({ key, selection })
@@ -113,7 +115,7 @@ export default function OperationsPage() {
       }
       
       try {
-        const reports = await getDetailedValidationReportAction(requests, options);
+        const reports = await getDetailedValidationReportAction(requests, primaryWorksheet, options);
         setDetailedReports(reports);
         
         const newSelections = new Map(selections);
@@ -148,7 +150,7 @@ export default function OperationsPage() {
   };
   
   const executeCompareAndCorrect = (options: ReportOptions) => {
-    if (!spreadsheetData || !primaryWorksheetName) {
+    if (spreadsheetData.length === 0 || !primaryWorksheet) {
         toast({
             variant: 'destructive',
             title: 'Configuração Incompleta',
@@ -162,7 +164,7 @@ export default function OperationsPage() {
             const correctedFiles = await compareAndCorrectAction(
                 spreadsheetData, 
                 Array.from(selections.values()), 
-                primaryWorksheetName,
+                primaryWorksheet,
                 undefined,
                 options
             );
@@ -193,13 +195,13 @@ export default function OperationsPage() {
   };
 
   const executeGeneratePaymentSheet = () => {
-    if (!primaryWorksheetName) {
+    if (!primaryWorksheet) {
       toast({ variant: 'destructive', title: 'Nenhuma Planilha Principal', description: 'Por favor, marque uma planilha como principal (usando a estrela).' });
       return;
     }
     
     const allSelections = Array.from(selections.values());
-    const primarySelections = allSelections.filter(s => s.worksheetName === primaryWorksheetName);
+    const primarySelections = allSelections.filter(s => s.fileName === primaryWorksheet.fileName && s.worksheetName === primaryWorksheet.worksheetName);
 
     const hasNome = primarySelections.some(s => s.role === 'key');
     const hasCPF = primarySelections.some(s => s.role === 'cpf');
@@ -218,7 +220,7 @@ export default function OperationsPage() {
         try {
             const paymentFile = await generatePaymentSheetAction(
                 Array.from(selections.values()), 
-                primaryWorksheetName,
+                primaryWorksheet,
             );
             
             if (paymentFile) {
@@ -245,7 +247,7 @@ export default function OperationsPage() {
   };
 
   const executeUpdatePaymentSheet = () => {
-    if (!primaryWorksheetName) {
+    if (!primaryWorksheet) {
         toast({ variant: 'destructive', title: 'Nenhuma Planilha Principal', description: 'Por favor, marque uma planilha como principal.' });
         return;
     }
@@ -262,7 +264,7 @@ export default function OperationsPage() {
                 const base64Content = (reader.result as string).split(',')[1];
                 const updatedFile = await updatePaymentSheetAction(
                     Array.from(selections.values()),
-                    primaryWorksheetName,
+                    primaryWorksheet,
                     base64Content,
                     existingPaymentFile.name
                 );
@@ -346,14 +348,14 @@ export default function OperationsPage() {
           toast({
               variant: 'destructive',
               title: 'Seleção Incompleta',
-              description: 'Para comparar valores, selecione pelo menos duas colunas "Chave" e duas colunas "Valor" entre as planilhas.',
+              description: 'Para comparar valores, selecione pelo menos duas colunas "Chave" e duas colunas "Valor" entre os arquivos/planilhas.',
           });
           return;
       }
     }
     
     if (selectedOperation === 'compare-and-correct') {
-      if (!primaryWorksheetName) {
+      if (!primaryWorksheet) {
         toast({ variant: 'destructive', title: 'Nenhuma Planilha Principal', description: 'Por favor, volte e marque uma planilha como principal (usando a estrela) para usar como fonte da verdade.' });
         return;
       }
@@ -400,8 +402,9 @@ export default function OperationsPage() {
                         <div className="flex items-start justify-between">
                             <div className="flex-grow">
                                 <p className="font-semibold truncate">{selection.columnName}</p>
-                                <p className="text-sm text-muted-foreground truncate">
-                                    Planilha: {selection.worksheetName}
+                                <p className="text-sm text-muted-foreground truncate" title={`${selection.fileName} > ${selection.worksheetName}`}>
+                                    <FileText className="h-3 w-3 inline-block mr-1" />
+                                    {selection.fileName} > {selection.worksheetName}
                                 </p>
                             </div>
                             {selection.validationResult && (
@@ -506,7 +509,7 @@ export default function OperationsPage() {
             reports={detailedReports} 
             spreadsheetData={spreadsheetData}
             selections={selectedArray}
-            primaryWorksheetName={primaryWorksheetName}
+            primaryWorksheet={primaryWorksheet}
             reportOptions={reportOptions}
         />
          <OperationOptionsDialog

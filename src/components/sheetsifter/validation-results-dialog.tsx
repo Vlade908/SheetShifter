@@ -13,18 +13,19 @@ import { compareAndCorrectAction, ReportOptions } from '@/app/actions';
 import { useToast } from "@/hooks/use-toast";
 import { parseCurrency } from '@/lib/utils';
 
+type PrimaryWorksheet = { fileName: string, worksheetName: string };
 
 interface ValidationResultsDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   reports: DetailedReport[] | null;
-  spreadsheetData: SpreadsheetData | null;
+  spreadsheetData: SpreadsheetData[] | null;
   selections: Selection[];
-  primaryWorksheetName: string | null;
+  primaryWorksheet: PrimaryWorksheet | null;
   reportOptions: ReportOptions;
 }
 
-export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreadsheetData, selections, primaryWorksheetName, reportOptions }: ValidationResultsDialogProps) {
+export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreadsheetData, selections, primaryWorksheet, reportOptions }: ValidationResultsDialogProps) {
   const { toast } = useToast();
   const [isDownloading, startDownloading] = useTransition();
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
@@ -43,19 +44,19 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
     }).format(numericValue);
   };
 
-  const handleDownload = async (targetWorksheet: string) => {
-    if (!spreadsheetData || !primaryWorksheetName || selections.length === 0) {
+  const handleDownload = async (targetFileName: string, targetWorksheetName: string) => {
+    if (!spreadsheetData || !primaryWorksheet || selections.length === 0) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Dados necessários para a correção estão faltando.' });
       return;
     }
-    setDownloadingKey(targetWorksheet);
+    setDownloadingKey(`${targetFileName}-${targetWorksheetName}`);
     startDownloading(async () => {
       try {
         const correctedFiles = await compareAndCorrectAction(
           spreadsheetData,
           selections,
-          primaryWorksheetName,
-          targetWorksheet,
+          primaryWorksheet,
+          targetWorksheetName,
           reportOptions
         );
 
@@ -69,7 +70,7 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
           document.body.removeChild(link);
           toast({ title: 'Download Iniciado', description: `O arquivo ${file.fileName} foi baixado.` });
         } else {
-          toast({ title: 'Nenhuma Correção Necessária', description: `A planilha ${targetWorksheet} já está correta ou nenhuma linha atendeu aos critérios.` });
+          toast({ title: 'Nenhuma Correção Necessária', description: `A planilha ${targetWorksheetName} já está correta ou nenhuma linha atendeu aos critérios.` });
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro durante a correção.';
@@ -101,7 +102,7 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                 <TabsList>
                 {reports.map(report => (
                     <TabsTrigger key={report.key} value={report.key}>
-                    {report.columnName} (vs {report.sourceColumnName})
+                    {report.columnName} ({report.fileName} &gt; {report.worksheetName})
                     {report.summary.invalidRows > 0 && (
                         <Badge variant="destructive" className="ml-2">
                         {report.summary.invalidRows}
@@ -118,6 +119,7 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                  <div className="pr-4">
                     <div className="flex justify-between items-start mb-4 p-4 border rounded-lg bg-secondary/50">
                         <div className="text-sm space-y-1">
+                          <p><strong>Arquivo:</strong> {report.fileName}</p>
                           <p><strong>Planilha:</strong> {report.worksheetName}</p>
                           <p><strong>Total de Linhas (no filtro):</strong> {report.summary.totalRows}</p>
                           <p className="font-semibold text-green-700"><strong>Correspondências Válidas:</strong> {report.summary.validRows}</p>
@@ -128,10 +130,10 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                         </div>
                         <Button
                           size="sm"
-                          onClick={() => handleDownload(report.worksheetName)}
+                          onClick={() => handleDownload(report.fileName, report.worksheetName)}
                           disabled={isDownloading}
                         >
-                           {isDownloading && downloadingKey === report.worksheetName ? (
+                           {isDownloading && downloadingKey === `${report.fileName}-${report.worksheetName}` ? (
                                 <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                             ) : (
                                 <Download className="mr-2 h-4 w-4" />

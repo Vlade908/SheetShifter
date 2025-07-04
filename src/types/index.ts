@@ -19,6 +19,7 @@ export interface SpreadsheetData {
 }
 
 export interface Selection {
+  fileName: string;
   worksheetName: string;
   columnName: string;
   dataType: DataType;
@@ -47,6 +48,7 @@ export interface DetailedValidationRow {
 
 export interface DetailedReport {
   key: string;
+  fileName: string;
   columnName: string;
   worksheetName: string;
   keyColumnName?: string;

@@ -20,10 +20,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+
 
 import { AppLogo } from "@/components/icons";
 import { DataTypeIcon } from "@/components/data-type-icon";
-import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search, User, Fingerprint, CircleDollarSign, Star } from "lucide-react";
+import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search, User, Fingerprint, CircleDollarSign, Star, FileText } from "lucide-react";
 
 const dataTypes: DataType[] = ['text', 'number', 'date', 'currency'];
 
@@ -62,8 +64,8 @@ function extractColumns(data: any[][], headerRow: number): Column[] {
 
 export default function SheetSifterApp() {
   const [step, setStep] = useState<"upload" | "selection">("upload");
-  const [spreadsheetData, setSpreadsheetData] = useState<SpreadsheetData | null>(null);
-  const [primaryWorksheetName, setPrimaryWorksheetName] = useState<string | null>(null);
+  const [spreadsheetData, setSpreadsheetData] = useState<SpreadsheetData[]>([]);
+  const [primaryWorksheet, setPrimaryWorksheet] = useState<{ fileName: string, worksheetName: string } | null>(null);
   const [selections, setSelections] = useState<Map<string, SelectionWithValidation>>(new Map());
   const [searchTerm, setSearchTerm] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -72,64 +74,73 @@ export default function SheetSifterApp() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-    setIsProcessingFile(true); // Set loading state immediately
+    setIsProcessingFile(true);
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        // Defer the heavy processing to allow the UI to update
-        setTimeout(() => {
-            try {
-                const data = e.target?.result;
-                const workbook = XLSX.read(data, { type: 'array' });
-                const defaultHeaderRow = 2;
+    const filePromises = Array.from(files).map(file => {
+      return new Promise<SpreadsheetData>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = e.target?.result;
+            const workbook = XLSX.read(data, { type: 'array' });
+            const defaultHeaderRow = 2;
 
-                const worksheets: Worksheet[] = workbook.SheetNames.map(sheetName => {
-                    const worksheet = workbook.Sheets[sheetName];
-                    const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                    
-                    return { 
-                      name: sheetName, 
-                      columns: extractColumns(jsonData, defaultHeaderRow),
-                      data: jsonData,
-                      headerRow: defaultHeaderRow,
-                    };
-                });
+            const worksheets: Worksheet[] = workbook.SheetNames.map(sheetName => {
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                
+                return { 
+                  name: sheetName, 
+                  columns: extractColumns(jsonData, defaultHeaderRow),
+                  data: jsonData,
+                  headerRow: defaultHeaderRow,
+                };
+            });
 
-                setSpreadsheetData({
-                    fileName: file.name,
-                    worksheets,
-                });
-                setPrimaryWorksheetName(worksheets.length > 0 ? worksheets[0].name : null);
-                setStep("selection");
+            resolve({
+              fileName: file.name,
+              worksheets,
+            });
+          } catch (error) {
+            reject(new Error(`Error processing file ${file.name}: ${error}`));
+          }
+        };
+        reader.onerror = () => {
+          reject(new Error(`Could not read file ${file.name}`));
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    });
 
-            } catch (error) {
-                console.error("Error processing file:", error);
-                toast({
-                    variant: "destructive",
-                    title: "Erro ao Processar Arquivo",
-                    description: "Ocorreu um problema ao analisar sua planilha. Por favor, verifique o formato do arquivo.",
-                });
-            } finally {
-                setIsProcessingFile(false);
-            }
-        }, 0);
-    };
-    reader.onerror = () => {
+    try {
+      const newSpreadsheetData = await Promise.all(filePromises);
+      const allSpreadsheets = [...spreadsheetData, ...newSpreadsheetData];
+      setSpreadsheetData(allSpreadsheets);
+      
+      if (!primaryWorksheet && allSpreadsheets.length > 0 && allSpreadsheets[0].worksheets.length > 0) {
+        setPrimaryWorksheet({
+          fileName: allSpreadsheets[0].fileName,
+          worksheetName: allSpreadsheets[0].worksheets[0].name,
+        });
+      }
+      setStep("selection");
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       toast({
           variant: "destructive",
-          title: "Erro de Leitura de Arquivo",
-          description: "Não foi possível ler o arquivo selecionado.",
+          title: "Erro ao Processar Arquivo",
+          description: errorMessage,
       });
+    } finally {
       setIsProcessingFile(false);
-    }
-    reader.readAsArrayBuffer(file);
-    
-    if(event.target) {
-      event.target.value = '';
+      if(event.target) {
+        event.target.value = '';
+      }
     }
   };
 
@@ -139,33 +150,35 @@ export default function SheetSifterApp() {
 
   const handleStartOver = () => {
     setStep("upload");
-    setSpreadsheetData(null);
+    setSpreadsheetData([]);
     setSelections(new Map());
-    setPrimaryWorksheetName(null);
-    sessionStorage.removeItem('selections');
-    sessionStorage.removeItem('spreadsheetData');
-    sessionStorage.removeItem('primaryWorksheetName');
+    setPrimaryWorksheet(null);
+    sessionStorage.clear();
   };
 
-  const handleHeaderRowChange = (worksheetName: string, newHeaderRow: number) => {
+  const handleHeaderRowChange = (fileName: string, worksheetName: string, newHeaderRow: number) => {
     if (isNaN(newHeaderRow) || newHeaderRow < 1) return;
 
     setSpreadsheetData(prevData => {
-      if (!prevData) return null;
-      const newWorksheets = prevData.worksheets.map(ws => {
-        if (ws.name === worksheetName) {
-          const newColumns = extractColumns(ws.data, newHeaderRow);
-          return { ...ws, headerRow: newHeaderRow, columns: newColumns };
+      return prevData.map(file => {
+        if (file.fileName === fileName) {
+          const newWorksheets = file.worksheets.map(ws => {
+            if (ws.name === worksheetName) {
+              const newColumns = extractColumns(ws.data, newHeaderRow);
+              return { ...ws, headerRow: newHeaderRow, columns: newColumns };
+            }
+            return ws;
+          });
+          return { ...file, worksheets: newWorksheets };
         }
-        return ws;
+        return file;
       });
-      return { ...prevData, worksheets: newWorksheets };
     });
 
     setSelections(prevSelections => {
       const newSelections = new Map(prevSelections);
       prevSelections.forEach((_, key) => {
-        if (key.startsWith(`${worksheetName}-`)) {
+        if (key.startsWith(`${fileName}-${worksheetName}-`)) {
           newSelections.delete(key);
         }
       });
@@ -173,11 +186,12 @@ export default function SheetSifterApp() {
     });
   };
 
-  const handleToggleSelection = (worksheetName: string, column: Column, columnIndex: number, isSelected: boolean) => {
-    const key = `${worksheetName}-${columnIndex}`;
+  const handleToggleSelection = (fileName: string, worksheetName: string, column: Column, columnIndex: number, isSelected: boolean) => {
+    const key = `${fileName}-${worksheetName}-${columnIndex}`;
     const newSelections = new Map(selections);
     if (isSelected) {
       newSelections.set(key, {
+        fileName,
         worksheetName,
         columnName: column.name,
         sampleData: column.sampleData || [],
@@ -223,7 +237,7 @@ export default function SheetSifterApp() {
     }
     
     const hasRoles = Array.from(selections.values()).some(s => s.role);
-    if(hasRoles && !primaryWorksheetName) {
+    if(hasRoles && !primaryWorksheet) {
       toast({
         variant: "destructive",
         title: "Nenhuma Planilha Principal",
@@ -263,8 +277,8 @@ export default function SheetSifterApp() {
         const selectionsToStore = Array.from(validatedSelections.entries());
         sessionStorage.setItem('selections', JSON.stringify(selectionsToStore));
         sessionStorage.setItem('spreadsheetData', JSON.stringify(spreadsheetData));
-        if(primaryWorksheetName) {
-          sessionStorage.setItem('primaryWorksheetName', primaryWorksheetName);
+        if(primaryWorksheet) {
+          sessionStorage.setItem('primaryWorksheet', JSON.stringify(primaryWorksheet));
         }
         router.push('/operations');
 
@@ -306,8 +320,8 @@ export default function SheetSifterApp() {
                       <div className="mx-auto bg-primary/10 rounded-full p-4 w-fit mb-4">
                           <UploadCloud className="h-12 w-12 text-primary" />
                       </div>
-                      <CardTitle className="font-headline text-3xl">Envie sua Planilha</CardTitle>
-                      <CardDescription className="text-base">Envie um arquivo .xls, .xlsx, .ods ou .csv para começar a selecionar e validar seus dados.</CardDescription>
+                      <CardTitle className="font-headline text-3xl">Envie suas Planilhas</CardTitle>
+                      <CardDescription className="text-base">Envie um ou mais arquivos .xls, .xlsx, .ods ou .csv para começar a comparar, selecionar e validar seus dados.</CardDescription>
                   </CardHeader>
                   <CardContent>
                       <input
@@ -317,6 +331,7 @@ export default function SheetSifterApp() {
                           className="hidden"
                           accept=".xlsx,.xls,.ods,.csv"
                           disabled={isProcessingFile}
+                          multiple
                       />
                       <Button size="lg" onClick={handleUploadClick} disabled={isProcessingFile}>
                           {isProcessingFile ? (
@@ -325,7 +340,7 @@ export default function SheetSifterApp() {
                               Processando...
                             </>
                           ) : (
-                            "Selecionar Arquivo para Enviar"
+                            "Selecionar Arquivos para Enviar"
                           )}
                       </Button>
                   </CardContent>
@@ -344,219 +359,168 @@ export default function SheetSifterApp() {
             <CardHeader>
               <CardTitle className="font-headline text-3xl">Selecione as Colunas e Valide</CardTitle>
               <CardDescription>
-                Arquivo: <span className="font-medium text-primary">{spreadsheetData?.fileName}</span>. 
-                Selecione uma aba, escolha a linha do cabeçalho e selecione as colunas para validar.
+                Selecione um arquivo, escolha a aba, defina a linha do cabeçalho e selecione as colunas para validar.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue={spreadsheetData?.worksheets[0]?.name} className="w-full">
-                <ScrollArea className="w-full">
-                    <TabsList>
-                      {spreadsheetData?.worksheets.map((worksheet) => {
-                        const hasSelections = Array.from(selections.keys()).some(k => k.startsWith(`${worksheet.name}-`));
-                        return(
-                        <TabsTrigger value={worksheet.name} key={worksheet.name} className="relative pr-10">
-                          <Sheet className="mr-2 h-4 w-4" />
-                          {worksheet.name}
-                          {hasSelections && (
-                            <span className="ml-2 h-2 w-2 rounded-full bg-primary" />
-                          )}
-                           <Tooltip>
-                            <TooltipTrigger asChild>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setPrimaryWorksheetName(worksheet.name);
-                                    }}
-                                    className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-muted"
-                                >
-                                    <Star className={cn("h-4 w-4 text-gray-400", primaryWorksheetName === worksheet.name && "fill-yellow-400 text-yellow-500")} />
-                                </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Marcar como planilha principal</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TabsTrigger>
-                      )})}
-                    </TabsList>
-                    <ScrollBar orientation="horizontal" />
-                </ScrollArea>
-                {spreadsheetData?.worksheets.map((worksheet) => (
-                  <TabsContent value={worksheet.name} key={worksheet.name} className="mt-4">
-                     <div className="flex flex-col md:flex-row items-center justify-between gap-4 my-4">
-                        <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg w-full md:w-auto flex-grow">
-                            <Label htmlFor={`header-row-${worksheet.name}`} className="text-sm font-medium shrink-0">
-                                Linha do Cabeçalho
-                            </Label>
-                            <Input
-                                id={`header-row-${worksheet.name}`}
-                                type="number"
-                                min="1"
-                                className="w-24 h-9"
-                                value={worksheet.headerRow}
-                                onChange={(e) => handleHeaderRowChange(worksheet.name, parseInt(e.target.value, 10))}
-                            />
-                            <p className="text-sm text-muted-foreground">Especifique qual linha contém os nomes das colunas.</p>
-                        </div>
-                        <div className="relative w-full md:w-72">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Buscar colunas..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 h-9"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="border rounded-md overflow-hidden">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="bg-secondary/50 hover:bg-secondary/50">
+              <Accordion type="multiple" defaultValue={spreadsheetData.map(f => f.fileName)} className="w-full">
+                {spreadsheetData.map((file) => (
+                  <AccordionItem value={file.fileName} key={file.fileName}>
+                    <AccordionTrigger>
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-5 w-5 text-primary" />
+                        <span className="font-semibold">{file.fileName}</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pl-4 border-l-2 ml-2">
+                      <Tabs defaultValue={file.worksheets[0]?.name} className="w-full">
+                        <ScrollArea className="w-full">
+                          <TabsList>
+                            {file.worksheets.map((worksheet) => {
+                              const isPrimary = primaryWorksheet?.fileName === file.fileName && primaryWorksheet?.worksheetName === worksheet.name;
+                              const hasSelections = Array.from(selections.keys()).some(k => k.startsWith(`${file.fileName}-${worksheet.name}-`));
+                              return (
+                                <TabsTrigger value={worksheet.name} key={worksheet.name} className="relative pr-10">
+                                  <Sheet className="mr-2 h-4 w-4" />
+                                  {worksheet.name}
+                                  {hasSelections && <span className="ml-2 h-2 w-2 rounded-full bg-primary" />}
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setPrimaryWorksheet({ fileName: file.fileName, worksheetName: worksheet.name });
+                                        }}
+                                        className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-muted"
+                                      >
+                                        <Star className={cn("h-4 w-4 text-gray-400", isPrimary && "fill-yellow-400 text-yellow-500")} />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>Marcar como planilha principal</p></TooltipContent>
+                                  </Tooltip>
+                                </TabsTrigger>
+                              )
+                            })}
+                          </TabsList>
+                          <ScrollBar orientation="horizontal" />
+                        </ScrollArea>
+                        {file.worksheets.map((worksheet) => (
+                          <TabsContent value={worksheet.name} key={worksheet.name} className="mt-4">
+                            <div className="flex flex-col md:flex-row items-center justify-between gap-4 my-4">
+                              <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg w-full md:w-auto flex-grow">
+                                <Label htmlFor={`header-row-${file.fileName}-${worksheet.name}`} className="text-sm font-medium shrink-0">
+                                  Linha do Cabeçalho
+                                </Label>
+                                <Input
+                                  id={`header-row-${file.fileName}-${worksheet.name}`}
+                                  type="number"
+                                  min="1"
+                                  className="w-24 h-9"
+                                  value={worksheet.headerRow}
+                                  onChange={(e) => handleHeaderRowChange(file.fileName, worksheet.name, parseInt(e.target.value, 10))}
+                                />
+                                <p className="text-sm text-muted-foreground">Especifique qual linha contém os nomes das colunas.</p>
+                              </div>
+                              <div className="relative w-full md:w-72">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  placeholder="Buscar colunas..."
+                                  value={searchTerm}
+                                  onChange={(e) => setSearchTerm(e.target.value)}
+                                  className="pl-10 h-9"
+                                />
+                              </div>
+                            </div>
+                            <div className="border rounded-md overflow-hidden">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow className="bg-secondary/50 hover:bg-secondary/50">
                                     <TableHead className="w-[50px]"></TableHead>
                                     <TableHead>Coluna</TableHead>
                                     <TableHead>Tipo de Dado</TableHead>
                                     <TableHead>Papel</TableHead>
                                     <TableHead className="text-right">Status da Validação</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {(() => {
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {(() => {
                                     const allColumnsWithIndex = worksheet.columns.map((column, index) => ({ column, originalIndex: index }));
-                                    
-                                    const filteredColumns = allColumnsWithIndex.filter(({ column }) =>
-                                        column.name.toLowerCase().includes(searchTerm.toLowerCase())
-                                    );
-                                    
+                                    const filteredColumns = allColumnsWithIndex.filter(({ column }) => column.name.toLowerCase().includes(searchTerm.toLowerCase()));
                                     const [selectedColumns, unselectedColumns] = filteredColumns.reduce<[typeof filteredColumns, typeof filteredColumns]>(
-                                        (acc, item) => {
-                                            const key = `${worksheet.name}-${item.originalIndex}`;
-                                            if (selections.has(key)) {
-                                                acc[0].push(item);
-                                            } else {
-                                                acc[1].push(item);
-                                            }
-                                            return acc;
-                                        },
-                                        [[], []]
-                                    );
-
+                                      (acc, item) => {
+                                        const key = `${file.fileName}-${worksheet.name}-${item.originalIndex}`;
+                                        if (selections.has(key)) acc[0].push(item);
+                                        else acc[1].push(item);
+                                        return acc;
+                                      }, [[], []]);
                                     const displayedColumns = [...selectedColumns, ...unselectedColumns];
 
-                                    if (displayedColumns.length === 0) {
-                                        return (
-                                            <TableRow>
-                                                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                                                    Nenhuma coluna corresponde à sua busca.
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    }
-
+                                    if (displayedColumns.length === 0) return <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhuma coluna corresponde à sua busca.</TableCell></TableRow>;
+                                    
                                     return displayedColumns.map(({ column, originalIndex }, index) => {
-                                        const key = `${worksheet.name}-${originalIndex}`;
-                                        const selection = selections.get(key);
-                                        const isFirstUnselected = index === selectedColumns.length;
-
-                                        return (
-                                            <React.Fragment key={key}>
-                                                {isFirstUnselected && selectedColumns.length > 0 && unselectedColumns.length > 0 && (
-                                                    <TableRow className="hover:bg-transparent">
-                                                        <TableCell colSpan={5} className="py-2 px-0">
-                                                            <Separator />
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )}
-                                                <TableRow className={selection ? 'bg-primary/5' : ''}>
-                                                    <TableCell>
-                                                        <Checkbox
-                                                            checked={!!selection}
-                                                            onCheckedChange={(checked) => handleToggleSelection(worksheet.name, column, originalIndex, !!checked)}
-                                                        />
-                                                    </TableCell>
-                                                    <TableCell className="font-medium">{column.name}</TableCell>
-                                                    <TableCell>
-                                                        <Select
-                                                            value={selection?.dataType}
-                                                            onValueChange={(value) => handleDataTypeChange(key, value as DataType)}
-                                                            disabled={!selection}
-                                                        >
-                                                            <SelectTrigger className="w-[150px]">
-                                                                <SelectValue placeholder="Selecione o tipo..." />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {dataTypes.map((type) => (
-                                                                    <SelectItem key={type} value={type}>
-                                                                        <div className="flex items-center gap-2">
-                                                                            <DataTypeIcon type={type} className="h-4 w-4 text-muted-foreground"/>
-                                                                            <span className="capitalize">{type}</span>
-                                                                        </div>
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Select
-                                                            value={selection?.role}
-                                                            onValueChange={(value) => handleRoleChange(key, value as 'key' | 'value' | 'cpf')}
-                                                            disabled={!selection}
-                                                        >
-                                                            <SelectTrigger className="w-[180px]">
-                                                                <SelectValue placeholder="Selecione o papel..." />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="key">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <User className="h-4 w-4 text-muted-foreground"/>
-                                                                        <span>Nome (Chave)</span>
-                                                                    </div>
-                                                                </SelectItem>
-                                                                <SelectItem value="cpf">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <Fingerprint className="h-4 w-4 text-muted-foreground"/>
-                                                                        <span>CPF</span>
-                                                                    </div>
-                                                                </SelectItem>
-                                                                <SelectItem value="value">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <CircleDollarSign className="h-4 w-4 text-muted-foreground"/>
-                                                                        <span>Valor</span>
-                                                                    </div>
-                                                                </SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </TableCell>
-                                                    <TableCell className="text-right">
-                                                        {selection?.isValidating ? (
-                                                            <LoaderCircle className="h-5 w-5 animate-spin text-primary inline-block" />
-                                                        ) : selection?.validationResult ? (
-                                                            <Tooltip>
-                                                                <TooltipTrigger>
-                                                                    {selection.validationResult.isValid ? (
-                                                                        <CheckCircle2 className="h-5 w-5 text-green-600 inline-block" />
-                                                                    ) : (
-                                                                        <XCircle className="h-5 w-5 text-red-600 inline-block" />
-                                                                    )}
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>
-                                                                    <p className="max-w-xs">{selection.validationResult.reason}</p>
-                                                                </TooltipContent>
-                                                            </Tooltip>
-                                                        ) : null}
-                                                    </TableCell>
-                                                </TableRow>
-                                            </React.Fragment>
-                                        );
+                                      const key = `${file.fileName}-${worksheet.name}-${originalIndex}`;
+                                      const selection = selections.get(key);
+                                      const isFirstUnselected = index === selectedColumns.length;
+                                      return (
+                                        <React.Fragment key={key}>
+                                          {isFirstUnselected && selectedColumns.length > 0 && unselectedColumns.length > 0 && (
+                                            <TableRow className="hover:bg-transparent"><TableCell colSpan={5} className="py-2 px-0"><Separator /></TableCell></TableRow>
+                                          )}
+                                          <TableRow className={selection ? 'bg-primary/5' : ''}>
+                                            <TableCell>
+                                              <Checkbox checked={!!selection} onCheckedChange={(checked) => handleToggleSelection(file.fileName, worksheet.name, column, originalIndex, !!checked)} />
+                                            </TableCell>
+                                            <TableCell className="font-medium">{column.name}</TableCell>
+                                            <TableCell>
+                                              <Select value={selection?.dataType} onValueChange={(value) => handleDataTypeChange(key, value as DataType)} disabled={!selection}>
+                                                <SelectTrigger className="w-[150px]"><SelectValue placeholder="Selecione o tipo..." /></SelectTrigger>
+                                                <SelectContent>
+                                                  {dataTypes.map((type) => (
+                                                    <SelectItem key={type} value={type}><div className="flex items-center gap-2"><DataTypeIcon type={type} className="h-4 w-4 text-muted-foreground"/> <span className="capitalize">{type}</span></div></SelectItem>
+                                                  ))}
+                                                </SelectContent>
+                                              </Select>
+                                            </TableCell>
+                                            <TableCell>
+                                              <Select value={selection?.role} onValueChange={(value) => handleRoleChange(key, value as 'key' | 'value' | 'cpf')} disabled={!selection}>
+                                                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Selecione o papel..." /></SelectTrigger>
+                                                <SelectContent>
+                                                  <SelectItem value="key"><div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground"/><span>Nome (Chave)</span></div></SelectItem>
+                                                  <SelectItem value="cpf"><div className="flex items-center gap-2"><Fingerprint className="h-4 w-4 text-muted-foreground"/><span>CPF</span></div></SelectItem>
+                                                  <SelectItem value="value"><div className="flex items-center gap-2"><CircleDollarSign className="h-4 w-4 text-muted-foreground"/><span>Valor</span></div></SelectItem>
+                                                </SelectContent>
+                                              </Select>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                              {selection?.isValidating ? (<LoaderCircle className="h-5 w-5 animate-spin text-primary inline-block" />) :
+                                                selection?.validationResult ? (
+                                                  <Tooltip>
+                                                    <TooltipTrigger>
+                                                      {selection.validationResult.isValid ? (
+                                                        <CheckCircle2 className="h-5 w-5 text-green-600 inline-block" />
+                                                      ) : (
+                                                        <XCircle className="h-5 w-5 text-red-600 inline-block" />
+                                                      )}
+                                                    </TooltipTrigger>
+                                                    <TooltipContent><p className="max-w-xs">{selection.validationResult.reason}</p></TooltipContent>
+                                                  </Tooltip>
+                                                ) : null}
+                                            </TableCell>
+                                          </TableRow>
+                                        </React.Fragment>
+                                      );
                                     });
-                                })()}
-                            </TableBody>
-                        </Table>
-                    </div>
-                  </TabsContent>
+                                  })()}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </TabsContent>
+                        ))}
+                      </Tabs>
+                    </AccordionContent>
+                  </AccordionItem>
                 ))}
-              </Tabs>
+              </Accordion>
               <div className="flex justify-end mt-6">
                 <Button size="lg" onClick={handleValidateAndProceed} disabled={isPending || selections.size === 0}>
                   {isPending ? (
