@@ -31,7 +31,7 @@ function validateSample(sample: string, dataType: DataType): boolean {
         case 'text':
             return true;
         case 'number':
-            return !isNaN(parseFloat(sample)) && isFinite(Number(sample));
+            return !isNaN(parseCurrency(sample)) && isFinite(Number(sample));
         case 'date':
             return !isNaN(new Date(sample).getTime());
         case 'currency':
@@ -133,14 +133,17 @@ function runComparisonValidation(requests: ValidationRequest[], options: ReportO
         const allResults = targetValueCol.fullData.map((value, index) => {
             const targetKey = targetKeyCol.fullData[index];
             const sourceValue = sourceMap.get(targetKey);
-            const isValid = (targetKey && sourceValue !== undefined) ? sourceValue === value : false;
+            
+            const isMatch = (targetKey && sourceValue !== undefined) 
+              ? parseCurrency(sourceValue) === parseCurrency(value)
+              : false;
             
             return {
                 rowIndex: index,
                 keyValue: targetKey || '',
                 value: value,
                 sourceValue: sourceValue,
-                isValid,
+                isValid: isMatch,
             };
         });
 
@@ -270,9 +273,6 @@ export async function compareAndCorrectAction(
 
     if (!targetKeyCol || !targetValueCol) continue;
     
-    const isValueCurrency = targetValueCol.dataType === 'currency';
-    const currencyFormat = 'R$ #,##0.00';
-
     const headerRowArray = targetWorksheet.data[targetWorksheet.headerRow - 1] as string[];
     const keyColIndex = headerRowArray.findIndex(h => h === targetKeyCol.columnName);
     const valueColIndex = headerRowArray.findIndex(h => h === targetValueCol.columnName);
@@ -283,36 +283,72 @@ export async function compareAndCorrectAction(
     }
     
     const originalData = targetWorksheet.data;
-    const correctedSheetData: any[][] = [originalData[targetWorksheet.headerRow - 1]];
+    const dataRows = originalData.slice(targetWorksheet.headerRow);
 
-    for (let i = targetWorksheet.headerRow; i < originalData.length; i++) {
-      const row = originalData[i];
-      const key = row[keyColIndex];
+    // Group rows by key to handle duplicates
+    const groupedRows = new Map<string, { row: any[] }[]>();
+    dataRows.forEach((row) => {
+        const key = row[keyColIndex];
+        if (key) {
+            const group = groupedRows.get(key) || [];
+            group.push({ row });
+            groupedRows.set(key, group);
+        }
+    });
 
-      if (key && sourceMap.has(key)) {
-        const correctValueStr = sourceMap.get(key)!;
+    const finalRows: any[][] = [];
+
+    for (const [key, group] of groupedRows.entries()) {
+        const correctValueStr = sourceMap.get(key);
+        if (correctValueStr === undefined) continue;
+
         const numericSourceValue = parseCurrency(correctValueStr);
-        
         if (options.filterGreaterThan !== undefined) {
-          if (isNaN(numericSourceValue) || numericSourceValue <= options.filterGreaterThan) {
-            continue; 
-          }
-        }
-
-        const correctedRow = [...row];
-        if (isValueCurrency && !isNaN(numericSourceValue)) {
-            correctedRow[valueColIndex] = { t: 'n', v: numericSourceValue, z: currencyFormat };
-        } else {
-            correctedRow[valueColIndex] = correctValueStr;
+            if (isNaN(numericSourceValue) || numericSourceValue <= options.filterGreaterThan) {
+                continue;
+            }
         }
         
-        correctedSheetData.push(correctedRow);
-      }
+        const isValueCurrency = targetValueCol.dataType === 'currency';
+        const currencyFormat = 'R$ #,##0.00';
+        
+        const correctedValue = isValueCurrency && !isNaN(numericSourceValue)
+            ? { t: 'n', v: numericSourceValue, z: currencyFormat }
+            : correctValueStr;
+
+        if (group.length === 1) { // Not a duplicate
+            const singleRowItem = group[0];
+            const correctedRow = [...singleRowItem.row];
+            correctedRow[valueColIndex] = correctedValue;
+            finalRows.push(correctedRow);
+        } else { // Duplicates found
+            const existingCorrectRow = group.find(item => {
+                const itemValue = item.row[valueColIndex];
+                return parseCurrency(itemValue) === numericSourceValue;
+            });
+
+            if (existingCorrectRow) {
+                finalRows.push(existingCorrectRow.row);
+            } else {
+                group.sort((a, b) => {
+                    const valA = parseCurrency(a.row[valueColIndex]);
+                    const valB = parseCurrency(b.row[valueColIndex]);
+                    if (isNaN(valA)) return -1;
+                    if (isNaN(valB)) return 1;
+                    return valA - valB;
+                });
+
+                const rowToKeep = group[group.length - 1]; 
+                const correctedRow = [...rowToKeep.row];
+                correctedRow[valueColIndex] = correctedValue;
+                finalRows.push(correctedRow);
+            }
+        }
     }
 
-
-    if (correctedSheetData.length > 1) {
-      const newWs = XLSX.utils.aoa_to_sheet(correctedSheetData);
+    if (finalRows.length > 0) {
+      const correctedSheetData = [headerRowArray, ...finalRows];
+      const newWs = XLSX.utils.aoa_to_sheet(correctedSheetData, { cellDates: true });
       const newWb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(newWb, newWs, wsName);
       
