@@ -2,6 +2,7 @@
 
 import type { Selection, DataType, DetailedReport, DetailedValidationRow, SpreadsheetData } from '@/types';
 import * as XLSX from 'xlsx';
+import { parseCurrency } from '@/lib/utils';
 
 export interface ValidationRequest {
   key: string;
@@ -34,9 +35,8 @@ function validateSample(sample: string, dataType: DataType): boolean {
         case 'date':
             return !isNaN(new Date(sample).getTime());
         case 'currency':
-            const cleanedSample = sample.replace(/[\$,€£¥]/g, '').replace(/,/g, '').trim();
-            if (cleanedSample === '') return true;
-            return !isNaN(parseFloat(cleanedSample)) && isFinite(Number(cleanedSample));
+            const numericValue = parseCurrency(sample);
+            return !isNaN(numericValue) && isFinite(numericValue);
         default:
             return false;
     }
@@ -146,7 +146,7 @@ function runComparisonValidation(requests: ValidationRequest[], options: ReportO
         const results = allResults.filter(row => {
             if (options.filterGreaterThan !== undefined) {
                 if (row.sourceValue === undefined) return false;
-                const numericSourceValue = parseFloat(row.sourceValue.replace(/\./g, '').replace(',', '.'));
+                const numericSourceValue = parseCurrency(row.sourceValue);
                 return !isNaN(numericSourceValue) && numericSourceValue > options.filterGreaterThan;
             }
             return true;
@@ -288,7 +288,7 @@ export async function compareAndCorrectAction(
 
       if (key && sourceMap.has(key)) {
         const correctValueStr = sourceMap.get(key)!;
-        const numericSourceValue = parseFloat(correctValueStr.replace(/\./g, '').replace(',', '.'));
+        const numericSourceValue = parseCurrency(correctValueStr);
         
         if (options.filterGreaterThan !== undefined) {
           if (isNaN(numericSourceValue) || numericSourceValue <= options.filterGreaterThan) {

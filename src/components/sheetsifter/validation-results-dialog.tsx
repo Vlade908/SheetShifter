@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle2, XCircle, Download, LoaderCircle } from 'lucide-react';
 import { compareAndCorrectAction, ReportOptions } from '@/app/actions';
 import { useToast } from "@/hooks/use-toast";
+import { parseCurrency } from '@/lib/utils';
 
 
 interface ValidationResultsDialogProps {
@@ -29,11 +30,11 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
 
   const formatValue = (value: string | undefined | null, dataType: DataType | undefined): string => {
-    if (dataType !== 'currency' || value === null || value === undefined || value.trim() === '') {
+    if (dataType !== 'currency' || value === null || value === undefined || String(value).trim() === '') {
       return value || '';
     }
-    const numericValue = parseFloat(value.replace(/\./g, '').replace(',', '.'));
-    if (isNaN(numericValue)) {
+    const numericValue = parseCurrency(value);
+    if (isNaN(numericValue) || !isFinite(numericValue)) {
       return value;
     }
     return new Intl.NumberFormat('pt-BR', {
