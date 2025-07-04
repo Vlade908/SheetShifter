@@ -23,15 +23,15 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports }: Valid
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl h-[85vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-2xl">Resultados da Verificação</DialogTitle>
           <DialogDescription>
             Análise detalhada da validação para cada coluna selecionada.
           </DialogDescription>
         </DialogHeader>
         {reports.length > 0 ? (
-          <Tabs defaultValue={defaultTab} className="flex-grow flex flex-col min-h-0">
+          <Tabs defaultValue={defaultTab} className="flex flex-col flex-1 overflow-hidden mt-2">
             <ScrollArea className="w-full flex-shrink-0">
                 <TabsList>
                 {reports.map(report => (
@@ -47,50 +47,49 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports }: Valid
                 </TabsList>
                 <ScrollBar orientation="horizontal"/>
             </ScrollArea>
-            <div className="flex-grow mt-4 relative">
-              <ScrollArea className="absolute inset-0 pr-6">
-                {reports.map(report => (
-                  <TabsContent key={report.key} value={report.key} className="m-0">
+            
+            {reports.map(report => (
+              <TabsContent key={report.key} value={report.key} className="flex-1 overflow-y-auto mt-4 pr-1">
+                 <div className="pr-4">
                     <div className="mb-4 text-sm space-y-1 p-4 border rounded-lg bg-secondary/50">
-                      <p><strong>Planilha:</strong> {report.worksheetName}</p>
-                      <p><strong>Total de Linhas:</strong> {report.summary.totalRows}</p>
-                      <p className="font-semibold text-green-700"><strong>Correspondências Válidas:</strong> {report.summary.validRows}</p>
-                      <p className="font-semibold text-red-700"><strong>Divergências:</strong> {report.summary.invalidRows}</p>
+                        <p><strong>Planilha:</strong> {report.worksheetName}</p>
+                        <p><strong>Total de Linhas:</strong> {report.summary.totalRows}</p>
+                        <p className="font-semibold text-green-700"><strong>Correspondências Válidas:</strong> {report.summary.validRows}</p>
+                        <p className="font-semibold text-red-700"><strong>Divergências:</strong> {report.summary.invalidRows}</p>
                     </div>
                     <Table>
-                      <TableHeader>
+                        <TableHeader>
                         <TableRow>
-                          <TableHead className="w-[100px]">Linha</TableHead>
-                          <TableHead>Valor</TableHead>
-                          <TableHead className="w-[150px] text-center">Status</TableHead>
+                            <TableHead className="w-[100px]">Linha</TableHead>
+                            <TableHead>Valor</TableHead>
+                            <TableHead className="w-[150px] text-center">Status</TableHead>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
+                        </TableHeader>
+                        <TableBody>
                         {report.results.map(row => (
-                          <TableRow key={row.rowIndex}>
+                            <TableRow key={row.rowIndex}>
                             <TableCell>{row.rowIndex + 1}</TableCell>
                             <TableCell className="font-mono text-xs">{row.value || <span className="text-muted-foreground italic">Vazio</span>}</TableCell>
                             <TableCell className="text-center">
-                              {row.isValid ? (
+                                {row.isValid ? (
                                 <Badge variant="outline" className="text-green-600 border-green-600">
-                                  <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
-                                  Correspondente
+                                    <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                                    Correspondente
                                 </Badge>
-                              ) : (
+                                ) : (
                                 <Badge variant="destructive">
-                                  <XCircle className="mr-1 h-3.5 w-3.5" />
-                                  Divergente
+                                    <XCircle className="mr-1 h-3.5 w-3.5" />
+                                    Divergente
                                 </Badge>
-                              )}
+                                )}
                             </TableCell>
-                          </TableRow>
+                            </TableRow>
                         ))}
-                      </TableBody>
+                        </TableBody>
                     </Table>
-                  </TabsContent>
-                ))}
-              </ScrollArea>
-            </div>
+                 </div>
+              </TabsContent>
+            ))}
           </Tabs>
         ) : (
           <div className="flex-grow flex items-center justify-center">
