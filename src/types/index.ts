@@ -6,8 +6,10 @@ export interface Column {
 }
 
 export interface Worksheet {
-  name: string;
+  name:string;
   columns: Column[];
+  headerRow: number;
+  data: any[][];
 }
 
 export interface SpreadsheetData {
