@@ -4,6 +4,7 @@ export interface Column {
   name: string;
   sampleData: string[];
   fullData: string[];
+  detectedType: DataType;
 }
 
 export interface Worksheet {

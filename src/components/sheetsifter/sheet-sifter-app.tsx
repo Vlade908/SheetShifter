@@ -8,6 +8,7 @@ import { validateSelectionsAction, type ValidationRequest } from "@/app/actions"
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { loadConfig, saveConfig } from '@/lib/config-storage';
+import { parseCurrency } from "@/lib/utils";
 import { ApplyConfigDialog } from '@/components/sheetsifter/apply-config-dialog';
 
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -27,6 +28,42 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { DataTypeIcon } from "@/components/data-type-icon";
 import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search, User, Fingerprint, CircleDollarSign, Star, FileText, Save, Plus, X, Menu } from "lucide-react";
 
+function detectDataType(samples: string[]): DataType {
+  if (samples.length === 0) return 'text';
+
+  const dateRegex = /^(?:\d{1,2}[-\/]\d{1,2}[-\/]\d{4}|\d{4}[-\/]\d{1,2}[-\/]\d{1,2})$/;
+  
+  let dateCandidates = 0;
+  let numberCandidates = 0;
+  let currencyCandidates = 0;
+  
+  const validSamples = samples.filter(s => s && String(s).trim() !== '').slice(0, 50);
+  if (validSamples.length === 0) return 'text';
+
+  for (const sample of validSamples) {
+    if (dateRegex.test(sample) && !isNaN(new Date(sample).getTime())) {
+      dateCandidates++;
+    }
+
+    const numericValue = parseCurrency(sample);
+    if (!isNaN(numericValue)) {
+      numberCandidates++;
+      if (/[R$€£]/.test(sample) || (sample.includes(',') && sample.split(',')[1]?.length === 2) || (sample.includes('.') && sample.split('.')[1]?.length === 2)) {
+         currencyCandidates++;
+      }
+    }
+  }
+
+  const total = validSamples.length;
+  const confidenceThreshold = 0.6;
+
+  if (dateCandidates / total >= confidenceThreshold) return 'date';
+  if (currencyCandidates / total >= confidenceThreshold) return 'currency';
+  if (numberCandidates / total >= confidenceThreshold) return 'number';
+
+  return 'text';
+}
+
 function extractColumns(data: any[][], headerRow: number): Column[] {
   if (data.length < headerRow) {
     return [];
@@ -44,6 +81,9 @@ function extractColumns(data: any[][], headerRow: number): Column[] {
         row[index] !== undefined && row[index] !== null ? String(row[index]) : ""
       );
 
+      const detectionSamples = fullData.filter(val => val && val.trim() !== '').slice(0, 50);
+      const detectedType = detectDataType(detectionSamples);
+
       const sampleData = fullData
         .slice(0, 3)
         .filter(val => val.trim() !== ""); 
@@ -52,6 +92,7 @@ function extractColumns(data: any[][], headerRow: number): Column[] {
         name: String(header || `Column ${index + 1}`),
         sampleData,
         fullData,
+        detectedType,
       };
     })
     .filter(column => column.name);
@@ -257,7 +298,7 @@ export default function SheetSifterApp() {
         columnName: column.name,
         sampleData: column.sampleData || [],
         fullData: column.fullData || [],
-        dataType: 'text',
+        dataType: column.detectedType,
         role: undefined,
         isValidating: false,
       });
