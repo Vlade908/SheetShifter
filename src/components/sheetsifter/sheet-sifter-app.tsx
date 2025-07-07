@@ -24,7 +24,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
 import { DataTypeIcon } from "@/components/data-type-icon";
-import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search, User, Fingerprint, CircleDollarSign, Star, FileText, Save, Plus } from "lucide-react";
+import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search, User, Fingerprint, CircleDollarSign, Star, FileText, Save, Plus, X } from "lucide-react";
 
 function extractColumns(data: any[][], headerRow: number): Column[] {
   if (data.length < headerRow) {
@@ -67,6 +67,7 @@ export default function SheetSifterApp() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isPending, startTransition] = useTransition();
   const [isProcessingFile, setIsProcessingFile] = useState(false);
+  const [activeFileTab, setActiveFileTab] = useState<string | undefined>();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -121,28 +122,36 @@ export default function SheetSifterApp() {
         });
 
         try {
-        const newSpreadsheetData = await Promise.all(filePromises);
-        const allSpreadsheets = [...spreadsheetData, ...newSpreadsheetData];
-        setSpreadsheetData(allSpreadsheets);
-        
-        if (!primaryWorksheet && allSpreadsheets.length > 0 && allSpreadsheets[0].worksheets.length > 0) {
-            setPrimaryWorksheet({
-            fileName: allSpreadsheets[0].fileName,
-            worksheetName: allSpreadsheets[0].worksheets[0].name,
-            });
-        }
-        setStep("selection");
-
-        // Check for saved configs for the newly added files
-        const firstNewFile = newSpreadsheetData[0];
-        if (firstNewFile) {
-            const config = loadConfig(firstNewFile.fileName);
-            if (config) {
-                setFoundConfig(config);
-                setConfigModalOpen(true);
+            const newSpreadsheetData = await Promise.all(filePromises);
+            if (newSpreadsheetData.length === 0) {
+                setIsProcessingFile(false);
+                return;
             }
-        }
+            
+            const allSpreadsheets = [...spreadsheetData, ...newSpreadsheetData];
+            setSpreadsheetData(allSpreadsheets);
+            
+            if (allSpreadsheets.length > 0) {
+                const firstFile = allSpreadsheets[0];
+                if (!primaryWorksheet && firstFile.worksheets.length > 0) {
+                    setPrimaryWorksheet({
+                    fileName: firstFile.fileName,
+                    worksheetName: firstFile.worksheets[0].name,
+                    });
+                }
+            }
 
+            setStep("selection");
+            setActiveFileTab(newSpreadsheetData[0].fileName);
+
+            const firstNewFile = newSpreadsheetData[0];
+            if (firstNewFile) {
+                const config = loadConfig(firstNewFile.fileName);
+                if (config) {
+                    setFoundConfig(config);
+                    setConfigModalOpen(true);
+                }
+            }
         } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         toast({
@@ -168,8 +177,44 @@ export default function SheetSifterApp() {
     setSpreadsheetData([]);
     setSelections(new Map());
     setPrimaryWorksheet(null);
+    setActiveFileTab(undefined);
     sessionStorage.clear();
   };
+
+  const handleRemoveSpreadsheet = (fileNameToRemove: string) => {
+    const updatedSpreadsheetData = spreadsheetData.filter(
+      (file) => file.fileName !== fileNameToRemove
+    );
+
+    if (updatedSpreadsheetData.length === 0) {
+      handleStartOver();
+      return;
+    }
+
+    setSpreadsheetData(updatedSpreadsheetData);
+
+    const newSelections = new Map(selections);
+    selections.forEach((_, key) => {
+      if (key.startsWith(`${fileNameToRemove}-`)) {
+        newSelections.delete(key);
+      }
+    });
+    setSelections(newSelections);
+
+    if (primaryWorksheet?.fileName === fileNameToRemove) {
+      const newPrimary = updatedSpreadsheetData[0];
+      setPrimaryWorksheet({
+        fileName: newPrimary.fileName,
+        worksheetName: newPrimary.worksheets[0].name,
+      });
+    }
+
+    const currentTabExists = updatedSpreadsheetData.some(f => f.fileName === activeFileTab);
+    if (activeFileTab === fileNameToRemove || !currentTabExists) {
+      setActiveFileTab(updatedSpreadsheetData[0].fileName);
+    }
+  };
+
 
   const handleHeaderRowChange = (fileName: string, worksheetName: string, newHeaderRow: number) => {
     if (isNaN(newHeaderRow) || newHeaderRow < 1) return;
@@ -321,6 +366,13 @@ export default function SheetSifterApp() {
     setSpreadsheetData(newSpreadsheetData);
     setSelections(newSelections);
     setPrimaryWorksheet(newPrimaryWorksheet);
+
+    if (newPrimaryWorksheet) {
+        setActiveFileTab(newPrimaryWorksheet.fileName);
+    } else if (newSpreadsheetData.length > 0) {
+        setActiveFileTab(newSpreadsheetData[0].fileName);
+    }
+    
     setFoundConfig(null);
     toast({ title: "Configuração Aplicada", description: "As configurações salvas foram aplicadas com sucesso." });
   };
@@ -455,14 +507,33 @@ export default function SheetSifterApp() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue={spreadsheetData.length > 0 ? `${spreadsheetData[0].fileName}-0` : undefined} className="w-full">
+                <Tabs value={activeFileTab} onValueChange={setActiveFileTab} className="w-full">
                   <ScrollArea className="w-full">
                       <TabsList>
-                          {spreadsheetData.map((file, fileIndex) => (
-                              <TabsTrigger value={`${file.fileName}-${fileIndex}`} key={`${file.fileName}-${fileIndex}`}>
-                                  <FileText className="mr-2 h-4 w-4" />
-                                  {file.fileName}
-                              </TabsTrigger>
+                          {spreadsheetData.map((file) => (
+                              <div key={file.fileName} className="relative group/tab">
+                                  <TabsTrigger value={file.fileName} className="pr-7">
+                                      <FileText className="mr-2 h-4 w-4" />
+                                      {file.fileName}
+                                  </TabsTrigger>
+                                  <Tooltip>
+                                      <TooltipTrigger asChild>
+                                          <button
+                                              onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleRemoveSpreadsheet(file.fileName);
+                                              }}
+                                              className="absolute top-1/2 right-1 -translate-y-1/2 z-10 p-0.5 rounded-sm text-muted-foreground opacity-0 group-hover/tab:opacity-100 focus-visible:opacity-100 hover:bg-muted hover:text-foreground transition-opacity"
+                                              aria-label={`Fechar ${file.fileName}`}
+                                          >
+                                              <X className="h-3.5 w-3.5" />
+                                          </button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                          <p>Fechar planilha</p>
+                                      </TooltipContent>
+                                  </Tooltip>
+                              </div>
                           ))}
                            <Tooltip>
                               <TooltipTrigger asChild>
@@ -483,8 +554,8 @@ export default function SheetSifterApp() {
                       <ScrollBar orientation="horizontal" />
                   </ScrollArea>
 
-                  {spreadsheetData.map((file, fileIndex) => (
-                      <TabsContent value={`${file.fileName}-${fileIndex}`} key={`${file.fileName}-${fileIndex}`} className="mt-4 border-t pt-4">
+                  {spreadsheetData.map((file) => (
+                      <TabsContent value={file.fileName} key={file.fileName} className="mt-4 border-t pt-4">
                           <Tabs defaultValue={file.worksheets[0]?.name} className="w-full">
                               <ScrollArea className="w-full">
                               <TabsList>
