@@ -452,7 +452,7 @@ export default function SheetSifterApp() {
           </main>
         ) : (
           <main className="flex-grow p-4 md:p-8 overflow-y-auto">
-            <Card className="w-full mx-auto shadow-lg">
+            <Card className="w-full max-w-7xl mx-auto shadow-lg">
               <CardHeader>
                 <CardTitle className="font-headline text-3xl">Selecione as Colunas e Valide</CardTitle>
                 <CardDescription>
@@ -533,7 +533,7 @@ export default function SheetSifterApp() {
                                       />
                                   </div>
                                   </div>
-                                  <div className="border rounded-md overflow-hidden">
+                                  <div className="border rounded-md">
                                   <Table>
                                       <TableHeader>
                                       <TableRow className="bg-secondary/50 hover:bg-secondary/50">
@@ -575,7 +575,7 @@ export default function SheetSifterApp() {
                                                   <TableCell className="font-medium">{column.name}</TableCell>
                                                   <TableCell>
                                                   <Select value={selection?.dataType} onValueChange={(value) => handleDataTypeChange(key, value as DataType)} disabled={!selection}>
-                                                      <SelectTrigger className="w-[150px]"><SelectValue placeholder="Selecione o tipo..." /></SelectTrigger>
+                                                      <SelectTrigger><SelectValue placeholder="Selecione o tipo..." /></SelectTrigger>
                                                       <SelectContent>
                                                       {dataTypes.map((type) => (
                                                           <SelectItem key={type} value={type}><div className="flex items-center gap-2"><DataTypeIcon type={type} className="h-4 w-4 text-muted-foreground"/> <span className="capitalize">{type}</span></div></SelectItem>
@@ -585,7 +585,7 @@ export default function SheetSifterApp() {
                                                   </TableCell>
                                                   <TableCell>
                                                   <Select value={selection?.role} onValueChange={(value) => handleRoleChange(key, value as 'key' | 'value' | 'cpf')} disabled={!selection}>
-                                                      <SelectTrigger className="w-[180px]"><SelectValue placeholder="Selecione o papel..." /></SelectTrigger>
+                                                      <SelectTrigger><SelectValue placeholder="Selecione o papel..." /></SelectTrigger>
                                                       <SelectContent>
                                                       <SelectItem value="key"><div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground"/><span>Nome (Chave)</span></div></SelectItem>
                                                       <SelectItem value="cpf"><div className="flex items-center gap-2"><Fingerprint className="h-4 w-4 text-muted-foreground"/><span>CPF</span></div></SelectItem>
