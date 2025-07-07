@@ -407,7 +407,7 @@ export default function OperationsPage() {
         <header className="flex items-center justify-between p-4 border-b shrink-0">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="md:hidden" />
-            <h1 className="text-2xl font-bold font-headline text-foreground">Operações</h1>
+            <h1 className="text-xl sm:text-2xl font-bold font-headline text-foreground">Operações</h1>
           </div>
           <Button variant="outline" onClick={handleStartOver}>
             <ArrowLeft className="mr-2 h-4 w-4"/>
@@ -490,8 +490,8 @@ export default function OperationsPage() {
                               >
                               <op.icon className="h-8 w-8 text-primary mt-1 shrink-0" />
                               <div>
-                                  <h3 className="text-lg font-semibold">{op.title}</h3>
-                                  <p className="text-muted-foreground">{op.description}</p>
+                                  <h3 className="text-base md:text-lg font-semibold">{op.title}</h3>
+                                  <p className="text-sm text-muted-foreground">{op.description}</p>
                               </div>
                               </button>
                           ))}

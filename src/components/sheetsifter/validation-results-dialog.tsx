@@ -89,9 +89,9 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[85vh] flex flex-col">
+      <DialogContent className="w-[95vw] max-w-4xl h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="text-2xl">Resultados da Verificação</DialogTitle>
+          <DialogTitle className="text-xl md:text-2xl">Resultados da Verificação</DialogTitle>
           <DialogDescription>
             Análise detalhada da validação para cada coluna selecionada.
           </DialogDescription>
@@ -117,7 +117,7 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
             {reports.map(report => (
               <TabsContent key={report.key} value={report.key} className="flex-1 overflow-y-auto mt-4 pr-1">
                  <div className="pr-4">
-                    <div className="flex justify-between items-start mb-4 p-4 border rounded-lg bg-secondary/50">
+                    <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-4 p-4 border rounded-lg bg-secondary/50">
                         <div className="text-sm space-y-1">
                           <p><strong>Arquivo:</strong> {report.fileName}</p>
                           <p><strong>Planilha:</strong> {report.worksheetName}</p>
@@ -128,18 +128,21 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                             <p className="font-semibold text-orange-600 dark:text-orange-500"><strong>Alunos Duplicados:</strong> {report.summary.duplicateKeys}</p>
                           )}
                         </div>
-                        <Button
-                          size="sm"
-                          onClick={() => handleDownload(report.fileName, report.worksheetName)}
-                          disabled={isDownloading}
-                        >
-                           {isDownloading && downloadingKey === `${report.fileName}-${report.worksheetName}` ? (
-                                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <Download className="mr-2 h-4 w-4" />
-                            )}
-                          Baixar Planilha Corrigida
-                        </Button>
+                        <div className="w-full md:w-auto flex-shrink-0">
+                            <Button
+                            size="sm"
+                            onClick={() => handleDownload(report.fileName, report.worksheetName)}
+                            disabled={isDownloading}
+                            className="w-full md:w-auto"
+                            >
+                            {isDownloading && downloadingKey === `${report.fileName}-${report.worksheetName}` ? (
+                                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Download className="mr-2 h-4 w-4" />
+                                )}
+                            Baixar Planilha Corrigida
+                            </Button>
+                        </div>
                     </div>
                     <Tabs defaultValue="details" className="w-full">
                         <TabsList>
@@ -148,7 +151,7 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                                 <TabsTrigger value="duplicates">Alunos Duplicados</TabsTrigger>
                             )}
                         </TabsList>
-                        <TabsContent value="details">
+                        <TabsContent value="details" className="mt-2">
                             <Table>
                                 <TableHeader>
                                 <TableRow>
@@ -185,7 +188,7 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                             </Table>
                         </TabsContent>
                         {report.duplicateKeyList && report.duplicateKeyList.length > 0 && (
-                          <TabsContent value="duplicates">
+                          <TabsContent value="duplicates" className="mt-2">
                             <Table>
                                 <TableHeader>
                                     <TableRow>

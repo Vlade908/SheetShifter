@@ -503,7 +503,7 @@ export default function SheetSifterApp() {
     <header className="flex items-center justify-between p-4 border-b shrink-0">
       <div className="flex items-center gap-2">
         <SidebarTrigger className="md:hidden" />
-        <h1 className="text-2xl font-bold font-headline text-foreground">Suas Planilhas</h1>
+        <h1 className="text-xl sm:text-2xl font-bold font-headline text-foreground">Suas Planilhas</h1>
       </div>
         {step === 'selection' && (
             <div className="flex items-center gap-2">
@@ -536,7 +536,7 @@ export default function SheetSifterApp() {
                     <div className="mx-auto bg-primary/10 rounded-full p-4 w-fit mb-4">
                         <UploadCloud className="h-12 w-12 text-primary" />
                     </div>
-                    <CardTitle className="font-headline text-3xl">Envie suas Planilhas</CardTitle>
+                    <CardTitle className="font-headline text-2xl md:text-3xl">Envie suas Planilhas</CardTitle>
                     <CardDescription className="text-base">Envie um ou mais arquivos .xls, .xlsx, .ods ou .csv para começar a comparar, selecionar e validar seus dados.</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -557,7 +557,7 @@ export default function SheetSifterApp() {
           <main className="flex-grow p-4 md:p-8 overflow-y-auto">
             <Card className="w-full max-w-7xl mx-auto shadow-lg">
               <CardHeader>
-                <CardTitle className="font-headline text-3xl">Selecione as Colunas e Valide</CardTitle>
+                <CardTitle className="font-headline text-2xl md:text-3xl">Selecione as Colunas e Valide</CardTitle>
                 <CardDescription>
                   Selecione um arquivo, escolha a aba, defina a linha do cabeçalho e selecione as colunas para validar.
                 </CardDescription>
