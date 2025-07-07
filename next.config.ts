@@ -7,7 +7,7 @@ const cspHeader = `
     font-src 'self' https://fonts.gstatic.com;
     img-src 'self' data: https://placehold.co;
     connect-src 'self';
-    frame-ancestors 'self' *.firebase.app *.web.app *.cloudworkstations.dev;
+    frame-ancestors 'self';
     object-src 'none';
     base-uri 'self';
     form-action 'self';
@@ -20,6 +20,10 @@ const nextConfig: NextConfig = {
         // Apply these headers to all routes in your application.
         source: '/:path*',
         headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN',
+          },
           {
             key: 'Content-Security-Policy',
             value: cspHeader.replace(/\s{2,}/g, ' ').trim(),
