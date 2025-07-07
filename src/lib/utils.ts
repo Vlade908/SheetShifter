@@ -9,8 +9,13 @@ export function parseCurrency(value: string | number | null | undefined): number
   if (value === null || value === undefined) return NaN;
   if (typeof value === 'number') return value;
 
+  const strValue = String(value).trim();
+  if (strValue === '#N/DISP') {
+    return 0;
+  }
+
   // Keep only digits, comma, dot, and negative sign.
-  let cleanedValue = String(value).replace(/[^0-9,.-]/g, '').trim();
+  let cleanedValue = strValue.replace(/[^0-9,.-]/g, '');
 
   // if it's just a negative sign, or empty, it's not a number
   if (cleanedValue === '-' || cleanedValue === '') return NaN;
