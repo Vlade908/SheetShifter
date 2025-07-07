@@ -556,15 +556,15 @@ export default function SheetSifterApp() {
             </Card>
           </main>
         ) : (
-          <main className="flex-grow p-4 md:p-8 overflow-y-auto">
+          <main className="flex-grow p-2 sm:p-4 md:p-8 overflow-y-auto">
             <Card className="w-full max-w-7xl mx-auto shadow-lg">
-              <CardHeader>
+              <CardHeader className="p-4 sm:p-6">
                 <CardTitle className="font-headline text-2xl md:text-3xl">Selecione as Colunas e Valide</CardTitle>
                 <CardDescription>
                   Selecione um arquivo, escolha a aba, defina a linha do cabeçalho e selecione as colunas para validar.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
                 <Tabs value={activeFileTab} onValueChange={setActiveFileTab} className="w-full">
                   <ScrollArea className="w-full">
                       <TabsList>
