@@ -133,7 +133,7 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                           onClick={() => handleDownload(report.fileName, report.worksheetName)}
                           disabled={isDownloading}
                         >
-                           {isDownloading && downloadingKey === `${report.fileName}-${targetWorksheetName}` ? (
+                           {isDownloading && downloadingKey === `${report.fileName}-${report.worksheetName}` ? (
                                 <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                             ) : (
                                 <Download className="mr-2 h-4 w-4" />
