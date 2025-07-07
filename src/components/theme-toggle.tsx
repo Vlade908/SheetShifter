@@ -23,7 +23,7 @@ export function ThemeToggle() {
   return (
     <div>
       {/* Expanded View */}
-      <div className="hidden space-x-1 rounded-lg bg-muted p-1 group-data-[state=expanded]:flex">
+      <div className="hidden w-full justify-around rounded-lg bg-muted p-1 group-data-[state=expanded]:flex">
         {buttons.map((b) => (
           <Button
             key={b.theme}
