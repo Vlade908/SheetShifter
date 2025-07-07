@@ -278,7 +278,7 @@ export default function SheetSifterApp() {
   const applyConfiguration = () => {
     if (!foundConfig) return;
 
-    const newSelections = new Map<string, SelectionWithValidation>();
+    const newSelections = new Map(selections);
     let newPrimaryWorksheet = primaryWorksheet;
 
     const newSpreadsheetData = spreadsheetData.map(file => {
