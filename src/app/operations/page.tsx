@@ -216,7 +216,7 @@ export default function OperationsPage() {
         toast({
             variant: 'destructive',
             title: 'Seleção Incompleta',
-            description: 'Para gerar a planilha de pagamento, selecione colunas para "Nome (Chave)", "CPF" e "Valor" na planilha principal.',
+            description: 'Para gerar la planilha de pagamento, selecione colunas para "Nome (Chave)", "CPF" e "Valor" na planilha principal.',
         });
         return;
     }
@@ -402,9 +402,9 @@ export default function OperationsPage() {
             Voltar
           </Button>
         </header>
-        <main className="flex-1 p-4 md:p-8 overflow-hidden">
-          <div className="w-full max-w-4xl mx-auto h-full grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <Card className="lg:col-span-1 flex flex-col h-full">
+        <main className="flex-1 p-4 md:p-8 flex flex-col overflow-hidden">
+          <div className="w-full max-w-4xl mx-auto flex-1 grid grid-cols-1 lg:grid-cols-3 gap-8 min-h-0">
+            <Card className="lg:col-span-1 flex flex-col">
               <CardHeader>
                 <CardTitle>Colunas Selecionadas</CardTitle>
                 <CardDescription>{selectedArray.length} colunas no total.</CardDescription>
@@ -454,7 +454,7 @@ export default function OperationsPage() {
               </CardContent>
             </Card>
 
-            <Card className="lg:col-span-2 flex flex-col h-full">
+            <Card className="lg:col-span-2 flex flex-col">
               <CardHeader>
                 <CardTitle className="font-headline text-3xl">O que você gostaria de fazer?</CardTitle>
                 <CardDescription>

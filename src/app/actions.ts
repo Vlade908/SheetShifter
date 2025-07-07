@@ -32,13 +32,16 @@ function validateSample(sample: string, dataType: DataType): boolean {
     switch (dataType) {
         case 'text':
             return true;
-        case 'number':
-            return !isNaN(parseCurrency(sample)) && isFinite(Number(sample));
-        case 'date':
-            return !isNaN(new Date(sample).getTime());
-        case 'currency':
+        case 'number': {
             const numericValue = parseCurrency(sample);
             return !isNaN(numericValue) && isFinite(numericValue);
+        }
+        case 'date':
+            return !isNaN(new Date(sample).getTime());
+        case 'currency': {
+            const numericValue = parseCurrency(sample);
+            return !isNaN(numericValue) && isFinite(numericValue);
+        }
         default:
             return false;
     }
