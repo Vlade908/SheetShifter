@@ -402,14 +402,14 @@ export default function OperationsPage() {
             Voltar
           </Button>
         </header>
-        <main className="flex-grow p-4 md:p-8 overflow-hidden">
+        <main className="flex-1 p-4 md:p-8 overflow-hidden">
           <div className="w-full max-w-4xl mx-auto h-full grid grid-cols-1 lg:grid-cols-3 gap-8">
             <Card className="lg:col-span-1 flex flex-col h-full">
               <CardHeader>
                 <CardTitle>Colunas Selecionadas</CardTitle>
                 <CardDescription>{selectedArray.length} colunas no total.</CardDescription>
               </CardHeader>
-              <CardContent className="flex-grow min-h-0">
+              <CardContent className="flex-1 min-h-0">
                 <ScrollArea className="h-full pr-4">
                   <div className="space-y-4">
                     {selectedArray.map((selection, index) => (
@@ -461,8 +461,8 @@ export default function OperationsPage() {
                   Escolha uma das operações abaixo para aplicar às suas colunas selecionadas.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-col flex-grow min-h-0">
-                <div className="flex-grow min-h-0">
+              <CardContent className="flex-1 flex flex-col min-h-0">
+                <div className="flex-1 min-h-0">
                     <ScrollArea className="h-full pr-4">
                         <div className="space-y-4">
                         {operations.map(op => (
