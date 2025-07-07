@@ -313,11 +313,10 @@ export default function OperationsPage() {
     }
   };
 
+  const executeOperation = (operationToExecute: string | null) => {
+    if (!operationToExecute) return;
 
-  const handleExecuteOperation = () => {
-    if (!selectedOperation) return;
-
-    if (selectedOperation === 'vlookup') {
+    if (operationToExecute === 'vlookup') {
       toast({
         title: "Não Implementado",
         description: "A operação PROCV ainda não foi implementada.",
@@ -325,12 +324,12 @@ export default function OperationsPage() {
       return;
     }
 
-    if (selectedOperation === 'generate-payment-sheet') {
+    if (operationToExecute === 'generate-payment-sheet') {
       executeGeneratePaymentSheet();
       return;
     }
 
-    if (selectedOperation === 'update-payment-sheet') {
+    if (operationToExecute === 'update-payment-sheet') {
       executeUpdatePaymentSheet();
       return;
     }
@@ -348,7 +347,7 @@ export default function OperationsPage() {
         return;
     }
     
-    if (selectedOperation === 'compare-report-only') {
+    if (operationToExecute === 'compare-report-only') {
       if (keys.length < 2 || values.length < 2) {
           toast({
               variant: 'destructive',
@@ -359,7 +358,7 @@ export default function OperationsPage() {
       }
     }
     
-    if (selectedOperation === 'compare-and-correct') {
+    if (operationToExecute === 'compare-and-correct') {
       if (!primaryWorksheet) {
         toast({ variant: 'destructive', title: 'Nenhuma Planilha Principal', description: 'Por favor, volte e marque uma planilha como principal (usando a estrela) para usar como fonte da verdade.' });
         return;
@@ -368,6 +367,15 @@ export default function OperationsPage() {
 
     setOptionsModalOpen(true);
   };
+
+  const handleExecuteButtonClick = () => {
+    executeOperation(selectedOperation);
+  }
+
+  const handleOperationDoubleClick = (opId: string) => {
+    setSelectedOperation(opId);
+    executeOperation(opId);
+  }
 
   const selectedArray = Array.from(selections.values());
 
@@ -469,6 +477,7 @@ export default function OperationsPage() {
                               <button
                               key={op.id}
                               onClick={() => setSelectedOperation(op.id)}
+                              onDoubleClick={() => handleOperationDoubleClick(op.id)}
                               className={cn(
                                   "w-full p-4 border rounded-lg text-left flex items-start gap-4 transition-all",
                                   "hover:bg-accent hover:text-accent-foreground",
@@ -515,7 +524,7 @@ export default function OperationsPage() {
                       </ScrollArea>
                   </div>
                   <div className="flex justify-end pt-6 shrink-0 border-t">
-                    <Button size="lg" onClick={handleExecuteOperation} disabled={!selectedOperation || isExecuting}>
+                    <Button size="lg" onClick={handleExecuteButtonClick} disabled={!selectedOperation || isExecuting}>
                       {isExecuting ? <LoaderCircle className="animate-spin mr-2" /> : null}
                       Executar Operação
                     </Button>
