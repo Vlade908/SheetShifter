@@ -410,7 +410,7 @@ export default function OperationsPage() {
                 <CardDescription>{selectedArray.length} colunas no total.</CardDescription>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[400px] pr-4">
+                <ScrollArea className="h-auto max-h-[60vh] pr-4">
                   <div className="space-y-4">
                     {selectedArray.map((selection, index) => (
                       <div key={index} className="p-3 border rounded-md bg-secondary/30">
