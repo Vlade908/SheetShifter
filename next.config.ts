@@ -7,7 +7,7 @@ const cspHeader = `
     font-src 'self' https://fonts.gstatic.com;
     img-src 'self' data: https://placehold.co;
     connect-src 'self';
-    frame-ancestors 'self';
+    frame-ancestors 'self' *.firebase.app *.web.app *.cloudworkstations.dev;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
