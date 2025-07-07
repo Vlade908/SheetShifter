@@ -396,7 +396,7 @@ export default function SheetSifterApp() {
 
   const renderHeader = () => (
     <header className="flex items-center justify-between p-4 border-b shrink-0">
-        <h1 className="text-2xl font-bold font-headline text-slate-800">Suas Planilhas</h1>
+        <h1 className="text-2xl font-bold font-headline text-foreground">Suas Planilhas</h1>
         {step === 'selection' && (
             <div className="flex items-center gap-2">
                 <Button variant="outline" onClick={handleStartOver}>
@@ -460,7 +460,7 @@ export default function SheetSifterApp() {
                       <TabsList>
                           {spreadsheetData.map((file, fileIndex) => (
                               <TabsTrigger value={`${file.fileName}-${fileIndex}`} key={`${file.fileName}-${fileIndex}`}>
-                                  <FileText className="mr-2 h-4 w-4 text-primary" />
+                                  <FileText className="mr-2 h-4 w-4" />
                                   {file.fileName}
                               </TabsTrigger>
                           ))}
@@ -505,7 +505,7 @@ export default function SheetSifterApp() {
                                               }}
                                               className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-muted"
                                           >
-                                              <Star className={cn("h-4 w-4 text-gray-400", isPrimary && "fill-yellow-400 text-yellow-500")} />
+                                              <Star className={cn("h-4 w-4 text-muted-foreground", isPrimary && "fill-amber-400 text-amber-500")} />
                                           </button>
                                           </TooltipTrigger>
                                           <TooltipContent><p>Marcar como planilha principal</p></TooltipContent>
@@ -550,8 +550,8 @@ export default function SheetSifterApp() {
                                           <TableRow className="bg-secondary/50 hover:bg-secondary/50">
                                               <TableHead className="w-[50px]"></TableHead>
                                               <TableHead>Coluna</TableHead>
-                                              <TableHead className="w-[200px]">Tipo de Dado</TableHead>
-                                              <TableHead className="w-[200px]">Papel</TableHead>
+                                              <TableHead className="w-auto min-w-[180px]">Tipo de Dado</TableHead>
+                                              <TableHead className="w-auto min-w-[180px]">Papel</TableHead>
                                               <TableHead className="w-[150px] text-right">Status da Validação</TableHead>
                                           </TableRow>
                                           </TableHeader>

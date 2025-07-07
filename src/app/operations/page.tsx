@@ -396,7 +396,7 @@ export default function OperationsPage() {
     <TooltipProvider>
       <div className="flex flex-col h-full w-full">
         <header className="flex items-center justify-between p-4 border-b shrink-0">
-          <h1 className="text-2xl font-bold font-headline text-slate-800">Operações</h1>
+          <h1 className="text-2xl font-bold font-headline text-foreground">Operações</h1>
           <Button variant="outline" onClick={handleStartOver}>
             <ArrowLeft className="mr-2 h-4 w-4"/>
             Voltar
@@ -426,9 +426,9 @@ export default function OperationsPage() {
                                 <Tooltip>
                                     <TooltipTrigger>
                                         {selection.validationResult.isValid ? (
-                                            <CheckCircle2 className="h-5 w-5 text-green-600 ml-2 shrink-0" />
+                                            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-500 ml-2 shrink-0" />
                                         ) : (
-                                            <XCircle className="h-5 w-5 text-red-600 ml-2 shrink-0" />
+                                            <XCircle className="h-5 w-5 text-destructive ml-2 shrink-0" />
                                         )}
                                     </TooltipTrigger>
                                     <TooltipContent>

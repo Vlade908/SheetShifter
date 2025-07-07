@@ -122,10 +122,10 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                           <p><strong>Arquivo:</strong> {report.fileName}</p>
                           <p><strong>Planilha:</strong> {report.worksheetName}</p>
                           <p><strong>Total de Linhas (no filtro):</strong> {report.summary.totalRows}</p>
-                          <p className="font-semibold text-green-700"><strong>Correspondências Válidas:</strong> {report.summary.validRows}</p>
-                          <p className="font-semibold text-red-700"><strong>Divergências:</strong> {report.summary.invalidRows}</p>
+                          <p className="font-semibold text-green-700 dark:text-green-500"><strong>Correspondências Válidas:</strong> {report.summary.validRows}</p>
+                          <p className="font-semibold text-destructive"><strong>Divergências:</strong> {report.summary.invalidRows}</p>
                           {report.summary.duplicateKeys > 0 && (
-                            <p className="font-semibold text-orange-600"><strong>Alunos Duplicados:</strong> {report.summary.duplicateKeys}</p>
+                            <p className="font-semibold text-orange-600 dark:text-orange-500"><strong>Alunos Duplicados:</strong> {report.summary.duplicateKeys}</p>
                           )}
                         </div>
                         <Button
@@ -133,7 +133,7 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                           onClick={() => handleDownload(report.fileName, report.worksheetName)}
                           disabled={isDownloading}
                         >
-                           {isDownloading && downloadingKey === `${report.fileName}-${report.worksheetName}` ? (
+                           {isDownloading && downloadingKey === `${report.fileName}-${targetWorksheetName}` ? (
                                 <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                             ) : (
                                 <Download className="mr-2 h-4 w-4" />
@@ -168,7 +168,7 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                                     <TableCell className="font-mono text-xs">{formatValue(row.value, report.valueDataType) || <span className="text-muted-foreground italic">Vazio</span>}</TableCell>
                                     <TableCell className="text-center">
                                         {row.isValid ? (
-                                        <Badge variant="outline" className="text-green-600 border-green-600">
+                                        <Badge variant="outline" className="text-green-600 border-green-600 dark:text-green-500 dark:border-green-500">
                                             <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
                                             Correspondente
                                         </Badge>

@@ -30,11 +30,10 @@ export function ThemeToggle() {
             variant={theme === b.theme ? 'secondary' : 'ghost'}
             size="sm"
             onClick={() => setTheme(b.theme)}
-            className="w-full"
+            className="w-9 px-0"
             aria-label={b.name}
           >
-            <b.icon className="mr-2 h-4 w-4" />
-            {b.name}
+            <b.icon className="h-4 w-4" />
           </Button>
         ))}
       </div>
