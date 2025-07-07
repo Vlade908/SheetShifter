@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useTransition, useRef } from "react";
@@ -259,14 +260,14 @@ export default function SheetSifterApp() {
 
 
   const handleHeaderRowChange = (fileName: string, worksheetName: string, newHeaderRow: number) => {
-    if (isNaN(newHeaderRow) || newHeaderRow < 1) return;
+    if (isNaN(newHeaderRow)) return;
 
     setSpreadsheetData(prevData => {
       return prevData.map(file => {
         if (file.fileName === fileName) {
           const newWorksheets = file.worksheets.map(ws => {
             if (ws.name === worksheetName) {
-              const newColumns = extractColumns(ws.data, newHeaderRow);
+              const newColumns = newHeaderRow >= 1 ? extractColumns(ws.data, newHeaderRow) : [];
               return { ...ws, headerRow: newHeaderRow, columns: newColumns };
             }
             return ws;
@@ -640,12 +641,12 @@ export default function SheetSifterApp() {
                                       Linha do Cabeçalho
                                       </Label>
                                       <Input
-                                      id={`header-row-${file.fileName}-${worksheet.name}`}
-                                      type="number"
-                                      min="1"
-                                      className="w-24 h-9"
-                                      value={worksheet.headerRow}
-                                      onChange={(e) => handleHeaderRowChange(file.fileName, worksheet.name, parseInt(e.target.value, 10))}
+                                        id={`header-row-${file.fileName}-${worksheet.name}`}
+                                        type="number"
+                                        min="1"
+                                        className="w-24 h-9"
+                                        value={worksheet.headerRow >= 1 ? worksheet.headerRow : ''}
+                                        onChange={(e) => handleHeaderRowChange(file.fileName, worksheet.name, e.target.value === '' ? 0 : parseInt(e.target.value, 10))}
                                       />
                                       <p className="text-sm text-muted-foreground">Especifique qual linha contém os nomes das colunas.</p>
                                   </div>
