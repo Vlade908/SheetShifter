@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { SelectionWithValidation, DetailedReport, SpreadsheetData, Selection } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Search, LoaderCircle, ClipboardCheck, CheckCircle2, XCircle, FilePenLine, FileSpreadsheet, ListChecks, Upload, FileText } from 'lucide-react';
+import { ArrowLeft, Search, LoaderCircle, ClipboardCheck, CheckCircle2, XCircle, FilePenLine, FileSpreadsheet, ListChecks, Upload, FileText, Menu } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { DataTypeIcon } from '@/components/data-type-icon';
@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getDetailedValidationReportAction, compareAndCorrectAction, generatePaymentSheetAction, updatePaymentSheetAction, type ValidationRequest, type ReportOptions } from '@/app/actions';
 import { ValidationResultsDialog } from '@/components/sheetsifter/validation-results-dialog';
 import { OperationOptionsDialog } from '@/components/sheetsifter/operation-options-dialog';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 
 const allOperations = [
   {
@@ -404,7 +405,10 @@ export default function OperationsPage() {
     <TooltipProvider>
       <div className="flex flex-col h-full w-full">
         <header className="flex items-center justify-between p-4 border-b shrink-0">
-          <h1 className="text-2xl font-bold font-headline text-foreground">Operações</h1>
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="md:hidden" />
+            <h1 className="text-2xl font-bold font-headline text-foreground">Operações</h1>
+          </div>
           <Button variant="outline" onClick={handleStartOver}>
             <ArrowLeft className="mr-2 h-4 w-4"/>
             Voltar

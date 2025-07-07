@@ -22,9 +22,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 import { DataTypeIcon } from "@/components/data-type-icon";
-import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search, User, Fingerprint, CircleDollarSign, Star, FileText, Save, Plus, X } from "lucide-react";
+import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search, User, Fingerprint, CircleDollarSign, Star, FileText, Save, Plus, X, Menu } from "lucide-react";
 
 function extractColumns(data: any[][], headerRow: number): Column[] {
   if (data.length < headerRow) {
@@ -448,7 +449,10 @@ export default function SheetSifterApp() {
 
   const renderHeader = () => (
     <header className="flex items-center justify-between p-4 border-b shrink-0">
+      <div className="flex items-center gap-2">
+        <SidebarTrigger className="md:hidden" />
         <h1 className="text-2xl font-bold font-headline text-foreground">Suas Planilhas</h1>
+      </div>
         {step === 'selection' && (
             <div className="flex items-center gap-2">
                 <Button variant="outline" onClick={handleStartOver}>
