@@ -24,7 +24,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
 import { DataTypeIcon } from "@/components/data-type-icon";
-import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search, User, Fingerprint, CircleDollarSign, Star, FileText, Save } from "lucide-react";
+import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search, User, Fingerprint, CircleDollarSign, Star, FileText, Save, Plus } from "lucide-react";
 
 function extractColumns(data: any[][], headerRow: number): Column[] {
   if (data.length < headerRow) {
@@ -73,7 +73,6 @@ export default function SheetSifterApp() {
   
   const [foundConfig, setFoundConfig] = useState<SavedSpreadsheetConfig | null>(null);
   const [isConfigModalOpen, setConfigModalOpen] = useState(false);
-
   const dataTypes: DataType[] = ['text', 'number', 'date', 'currency'];
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -400,10 +399,6 @@ export default function SheetSifterApp() {
         <h1 className="text-2xl font-bold font-headline text-slate-800">Suas Planilhas</h1>
         {step === 'selection' && (
             <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={handleUploadClick}>
-                    <UploadCloud className="mr-2 h-4 w-4"/>
-                    Adicionar Arquivos
-                </Button>
                 <Button variant="outline" onClick={handleStartOver}>
                     <RefreshCw className="mr-2 h-4 w-4"/>
                     Começar de Novo
@@ -469,6 +464,21 @@ export default function SheetSifterApp() {
                                   {file.fileName}
                               </TabsTrigger>
                           ))}
+                           <Tooltip>
+                              <TooltipTrigger asChild>
+                                  <button
+                                      onClick={handleUploadClick}
+                                      className="inline-flex items-center justify-center whitespace-nowrap rounded-md p-1 h-10 w-10 text-muted-foreground bg-muted hover:bg-muted/80 hover:text-foreground transition-all ml-2"
+                                      aria-label="Adicionar novo arquivo"
+                                      disabled={isProcessingFile}
+                                  >
+                                      {isProcessingFile ? <LoaderCircle className="h-4 w-4 animate-spin"/> : <Plus className="h-4 w-4" />}
+                                  </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                  <p>Adicionar novo arquivo</p>
+                              </TooltipContent>
+                          </Tooltip>
                       </TabsList>
                       <ScrollBar orientation="horizontal" />
                   </ScrollArea>
@@ -534,87 +544,90 @@ export default function SheetSifterApp() {
                                   </div>
                                   </div>
                                   <div className="border rounded-md">
-                                  <Table>
-                                      <TableHeader>
-                                      <TableRow className="bg-secondary/50 hover:bg-secondary/50">
-                                          <TableHead className="w-[50px]"></TableHead>
-                                          <TableHead>Coluna</TableHead>
-                                          <TableHead>Tipo de Dado</TableHead>
-                                          <TableHead>Papel</TableHead>
-                                          <TableHead className="text-right">Status da Validação</TableHead>
-                                      </TableRow>
-                                      </TableHeader>
-                                      <TableBody>
-                                      {(() => {
-                                          const allColumnsWithIndex = worksheet.columns.map((column, index) => ({ column, originalIndex: index }));
-                                          const filteredColumns = allColumnsWithIndex.filter(({ column }) => column.name.toLowerCase().includes(searchTerm.toLowerCase()));
-                                          const [selectedColumns, unselectedColumns] = filteredColumns.reduce<[typeof filteredColumns, typeof filteredColumns]>(
-                                          (acc, item) => {
-                                              const key = `${file.fileName}-${worksheet.name}-${item.originalIndex}`;
-                                              if (selections.has(key)) acc[0].push(item);
-                                              else acc[1].push(item);
-                                              return acc;
-                                          }, [[], []]);
-                                          const displayedColumns = [...selectedColumns, ...unselectedColumns];
+                                    <ScrollArea className="w-full">
+                                      <Table>
+                                          <TableHeader>
+                                          <TableRow className="bg-secondary/50 hover:bg-secondary/50">
+                                              <TableHead className="w-[50px]"></TableHead>
+                                              <TableHead>Coluna</TableHead>
+                                              <TableHead className="w-[200px]">Tipo de Dado</TableHead>
+                                              <TableHead className="w-[200px]">Papel</TableHead>
+                                              <TableHead className="w-[150px] text-right">Status da Validação</TableHead>
+                                          </TableRow>
+                                          </TableHeader>
+                                          <TableBody>
+                                          {(() => {
+                                              const allColumnsWithIndex = worksheet.columns.map((column, index) => ({ column, originalIndex: index }));
+                                              const filteredColumns = allColumnsWithIndex.filter(({ column }) => column.name.toLowerCase().includes(searchTerm.toLowerCase()));
+                                              const [selectedColumns, unselectedColumns] = filteredColumns.reduce<[typeof filteredColumns, typeof filteredColumns]>(
+                                              (acc, item) => {
+                                                  const key = `${file.fileName}-${worksheet.name}-${item.originalIndex}`;
+                                                  if (selections.has(key)) acc[0].push(item);
+                                                  else acc[1].push(item);
+                                                  return acc;
+                                              }, [[], []]);
+                                              const displayedColumns = [...selectedColumns, ...unselectedColumns];
 
-                                          if (displayedColumns.length === 0) return <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhuma coluna corresponde à sua busca.</TableCell></TableRow>;
-                                          
-                                          return displayedColumns.map(({ column, originalIndex }, index) => {
-                                          const key = `${file.fileName}-${worksheet.name}-${originalIndex}`;
-                                          const selection = selections.get(key);
-                                          const isFirstUnselected = index === selectedColumns.length;
-                                          return (
-                                              <React.Fragment key={key}>
-                                              {isFirstUnselected && selectedColumns.length > 0 && unselectedColumns.length > 0 && (
-                                                  <TableRow className="hover:bg-transparent"><TableCell colSpan={5} className="py-2 px-0"><Separator /></TableCell></TableRow>
-                                              )}
-                                              <TableRow className={selection ? 'bg-primary/5' : ''}>
-                                                  <TableCell>
-                                                  <Checkbox checked={!!selection} onCheckedChange={(checked) => handleToggleSelection(file.fileName, worksheet.name, column, originalIndex, !!checked)} />
-                                                  </TableCell>
-                                                  <TableCell className="font-medium">{column.name}</TableCell>
-                                                  <TableCell>
-                                                  <Select value={selection?.dataType} onValueChange={(value) => handleDataTypeChange(key, value as DataType)} disabled={!selection}>
-                                                      <SelectTrigger><SelectValue placeholder="Selecione o tipo..." /></SelectTrigger>
-                                                      <SelectContent>
-                                                      {dataTypes.map((type) => (
-                                                          <SelectItem key={type} value={type}><div className="flex items-center gap-2"><DataTypeIcon type={type} className="h-4 w-4 text-muted-foreground"/> <span className="capitalize">{type}</span></div></SelectItem>
-                                                      ))}
-                                                      </SelectContent>
-                                                  </Select>
-                                                  </TableCell>
-                                                  <TableCell>
-                                                  <Select value={selection?.role} onValueChange={(value) => handleRoleChange(key, value as 'key' | 'value' | 'cpf')} disabled={!selection}>
-                                                      <SelectTrigger><SelectValue placeholder="Selecione o papel..." /></SelectTrigger>
-                                                      <SelectContent>
-                                                      <SelectItem value="key"><div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground"/><span>Nome (Chave)</span></div></SelectItem>
-                                                      <SelectItem value="cpf"><div className="flex items-center gap-2"><Fingerprint className="h-4 w-4 text-muted-foreground"/><span>CPF</span></div></SelectItem>
-                                                      <SelectItem value="value"><div className="flex items-center gap-2"><CircleDollarSign className="h-4 w-4 text-muted-foreground"/><span>Valor</span></div></SelectItem>
-                                                      </SelectContent>
-                                                  </Select>
-                                                  </TableCell>
-                                                  <TableCell className="text-right">
-                                                  {selection?.isValidating ? (<LoaderCircle className="h-5 w-5 animate-spin text-primary inline-block" />) :
-                                                      selection?.validationResult ? (
-                                                      <Tooltip>
-                                                          <TooltipTrigger>
-                                                          {selection.validationResult.isValid ? (
-                                                              <CheckCircle2 className="h-5 w-5 text-green-600 inline-block" />
-                                                          ) : (
-                                                              <XCircle className="h-5 w-5 text-red-600 inline-block" />
-                                                          )}
-                                                          </TooltipTrigger>
-                                                          <TooltipContent><p className="max-w-xs">{selection.validationResult.reason}</p></TooltipContent>
-                                                      </Tooltip>
-                                                      ) : null}
-                                                  </TableCell>
-                                              </TableRow>
-                                              </React.Fragment>
-                                          );
-                                          });
-                                      })()}
-                                      </TableBody>
-                                  </Table>
+                                              if (displayedColumns.length === 0) return <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhuma coluna corresponde à sua busca.</TableCell></TableRow>;
+                                              
+                                              return displayedColumns.map(({ column, originalIndex }, index) => {
+                                              const key = `${file.fileName}-${worksheet.name}-${originalIndex}`;
+                                              const selection = selections.get(key);
+                                              const isFirstUnselected = index === selectedColumns.length;
+                                              return (
+                                                  <React.Fragment key={key}>
+                                                  {isFirstUnselected && selectedColumns.length > 0 && unselectedColumns.length > 0 && (
+                                                      <TableRow className="hover:bg-transparent"><TableCell colSpan={5} className="py-2 px-0"><Separator /></TableCell></TableRow>
+                                                  )}
+                                                  <TableRow className={selection ? 'bg-primary/5' : ''}>
+                                                      <TableCell>
+                                                      <Checkbox checked={!!selection} onCheckedChange={(checked) => handleToggleSelection(file.fileName, worksheet.name, column, originalIndex, !!checked)} />
+                                                      </TableCell>
+                                                      <TableCell className="font-medium">{column.name}</TableCell>
+                                                      <TableCell>
+                                                      <Select value={selection?.dataType} onValueChange={(value) => handleDataTypeChange(key, value as DataType)} disabled={!selection}>
+                                                          <SelectTrigger><SelectValue placeholder="Selecione o tipo..." /></SelectTrigger>
+                                                          <SelectContent>
+                                                          {dataTypes.map((type) => (
+                                                              <SelectItem key={type} value={type}><div className="flex items-center gap-2"><DataTypeIcon type={type} className="h-4 w-4 text-muted-foreground"/> <span className="capitalize">{type}</span></div></SelectItem>
+                                                          ))}
+                                                          </SelectContent>
+                                                      </Select>
+                                                      </TableCell>
+                                                      <TableCell>
+                                                      <Select value={selection?.role} onValueChange={(value) => handleRoleChange(key, value as 'key' | 'value' | 'cpf')} disabled={!selection}>
+                                                          <SelectTrigger><SelectValue placeholder="Selecione o papel..." /></SelectTrigger>
+                                                          <SelectContent>
+                                                          <SelectItem value="key"><div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground"/><span>Nome (Chave)</span></div></SelectItem>
+                                                          <SelectItem value="cpf"><div className="flex items-center gap-2"><Fingerprint className="h-4 w-4 text-muted-foreground"/><span>CPF</span></div></SelectItem>
+                                                          <SelectItem value="value"><div className="flex items-center gap-2"><CircleDollarSign className="h-4 w-4 text-muted-foreground"/><span>Valor</span></div></SelectItem>
+                                                          </SelectContent>
+                                                      </Select>
+                                                      </TableCell>
+                                                      <TableCell className="text-right">
+                                                      {selection?.isValidating ? (<LoaderCircle className="h-5 w-5 animate-spin text-primary inline-block" />) :
+                                                          selection?.validationResult ? (
+                                                          <Tooltip>
+                                                              <TooltipTrigger>
+                                                              {selection.validationResult.isValid ? (
+                                                                  <CheckCircle2 className="h-5 w-5 text-green-600 inline-block" />
+                                                              ) : (
+                                                                  <XCircle className="h-5 w-5 text-red-600 inline-block" />
+                                                              )}
+                                                              </TooltipTrigger>
+                                                              <TooltipContent><p className="max-w-xs">{selection.validationResult.reason}</p></TooltipContent>
+                                                          </Tooltip>
+                                                          ) : null}
+                                                      </TableCell>
+                                                  </TableRow>
+                                                  </React.Fragment>
+                                              );
+                                              });
+                                          })()}
+                                          </TableBody>
+                                      </Table>
+                                      <ScrollBar orientation="horizontal" />
+                                    </ScrollArea>
                                   </div>
                               </TabsContent>
                               ))}
