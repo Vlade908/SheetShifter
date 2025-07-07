@@ -8,6 +8,7 @@ import {
   Sidebar,
   SidebarHeader,
   SidebarContent,
+  SidebarFooter,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
@@ -16,6 +17,7 @@ import {
 } from '@/components/ui/sidebar';
 import { AppLogo } from '@/components/icons';
 import { LayoutDashboard, Sheet as SheetIcon } from 'lucide-react';
+import { ThemeToggle } from '../theme-toggle';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -26,7 +28,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <SidebarHeader>
                 <div className="flex items-center gap-2">
                     <AppLogo className="h-8 w-8 text-primary" />
-                    <h1 className="text-xl font-semibold font-headline text-slate-800 group-data-[state=collapsed]:hidden">SheetSifter</h1>
+                    <h1 className="text-xl font-semibold font-headline text-sidebar-foreground group-data-[state=collapsed]:hidden">SheetSifter</h1>
                 </div>
             </SidebarHeader>
             <SidebarContent>
@@ -39,7 +41,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   >
                     <Link href="/dashboard">
                       <LayoutDashboard />
-                      <span>Dashboard</span>
+                      <span className="group-data-[state=collapsed]:hidden">Dashboard</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -51,12 +53,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   >
                     <Link href="/">
                       <SheetIcon />
-                      <span>Planilhas</span>
+                      <span className="group-data-[state=collapsed]:hidden">Planilhas</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
             </SidebarContent>
+            <SidebarFooter>
+                <ThemeToggle />
+            </SidebarFooter>
             <SidebarRail />
           </Sidebar>
           <SidebarInset>
