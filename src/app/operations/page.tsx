@@ -444,27 +444,25 @@ export default function OperationsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[calc(100vh-500px)] pr-4">
-                  <div className="space-y-4">
-                    {operations.map(op => (
-                      <button
-                        key={op.id}
-                        onClick={() => setSelectedOperation(op.id)}
-                        className={cn(
-                          "w-full p-4 border rounded-lg text-left flex items-start gap-4 transition-all",
-                          "hover:bg-accent hover:text-accent-foreground",
-                          selectedOperation === op.id ? "bg-accent text-accent-foreground ring-2 ring-primary" : "bg-transparent"
-                        )}
-                      >
-                        <op.icon className="h-8 w-8 text-primary mt-1 shrink-0" />
-                        <div>
-                          <h3 className="text-lg font-semibold">{op.title}</h3>
-                          <p className="text-muted-foreground">{op.description}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </ScrollArea>
+                <div className="space-y-4 pr-4">
+                  {operations.map(op => (
+                    <button
+                      key={op.id}
+                      onClick={() => setSelectedOperation(op.id)}
+                      className={cn(
+                        "w-full p-4 border rounded-lg text-left flex items-start gap-4 transition-all",
+                        "hover:bg-accent hover:text-accent-foreground",
+                        selectedOperation === op.id ? "bg-accent text-accent-foreground ring-2 ring-primary" : "bg-transparent"
+                      )}
+                    >
+                      <op.icon className="h-8 w-8 text-primary mt-1 shrink-0" />
+                      <div>
+                        <h3 className="text-lg font-semibold">{op.title}</h3>
+                        <p className="text-muted-foreground">{op.description}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
                 
                 {selectedOperation === 'update-payment-sheet' && (
                   <div className="mt-6 p-4 border-dashed border-2 rounded-lg text-center bg-secondary/30">

@@ -12,20 +12,21 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarInset,
+  SidebarRail,
 } from '@/components/ui/sidebar';
 import { AppLogo } from '@/components/icons';
-import { LayoutDashboard, Sheet } from 'lucide-react';
+import { LayoutDashboard, Sheet as SheetIcon } from 'lucide-react';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
 
     return (
         <SidebarProvider>
-          <Sidebar>
+          <Sidebar collapsible="icon">
             <SidebarHeader>
                 <div className="flex items-center gap-2">
                     <AppLogo className="h-8 w-8 text-primary" />
-                    <h1 className="text-xl font-semibold font-headline text-slate-800">SheetSifter</h1>
+                    <h1 className="text-xl font-semibold font-headline text-slate-800 group-data-[state=collapsed]:hidden">SheetSifter</h1>
                 </div>
             </SidebarHeader>
             <SidebarContent>
@@ -49,13 +50,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     tooltip="Planilhas"
                   >
                     <Link href="/">
-                      <Sheet />
+                      <SheetIcon />
                       <span>Planilhas</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
             </SidebarContent>
+            <SidebarRail />
           </Sidebar>
           <SidebarInset>
             {children}
