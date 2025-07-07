@@ -414,10 +414,10 @@ export default function OperationsPage() {
                   <div className="space-y-4">
                     {selectedArray.map((selection, index) => (
                       <div key={index} className="p-3 border rounded-md bg-secondary/30">
-                        <div className="flex items-start justify-between">
-                            <div className="flex-grow">
-                                <p className="font-semibold truncate">{selection.columnName}</p>
-                                <p className="text-sm text-muted-foreground truncate" title={`${selection.fileName} > ${selection.worksheetName}`}>
+                        <div className="flex items-start justify-between gap-2">
+                            <div className="flex-grow min-w-0">
+                                <p className="font-semibold break-words">{selection.columnName}</p>
+                                <p className="text-sm text-muted-foreground break-words" title={`${selection.fileName} > ${selection.worksheetName}`}>
                                     <FileText className="h-3 w-3 inline-block mr-1" />
                                     {selection.fileName} > {selection.worksheetName}
                                 </p>
@@ -426,9 +426,9 @@ export default function OperationsPage() {
                                 <Tooltip>
                                     <TooltipTrigger>
                                         {selection.validationResult.isValid ? (
-                                            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-500 ml-2 shrink-0" />
+                                            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-500 shrink-0" />
                                         ) : (
-                                            <XCircle className="h-5 w-5 text-destructive ml-2 shrink-0" />
+                                            <XCircle className="h-5 w-5 text-destructive shrink-0" />
                                         )}
                                     </TooltipTrigger>
                                     <TooltipContent>
