@@ -33,6 +33,7 @@ function detectDataType(samples: string[]): DataType {
   if (samples.length === 0) return 'text';
 
   const dateRegex = /^(?:\d{1,2}[-\/]\d{1,2}[-\/]\d{4}|\d{4}[-\/]\d{1,2}[-\/]\d{1,2})$/;
+  const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
   
   let dateCandidates = 0;
   let numberCandidates = 0;
@@ -41,7 +42,16 @@ function detectDataType(samples: string[]): DataType {
   const validSamples = samples.filter(s => s && String(s).trim() !== '').slice(0, 50);
   if (validSamples.length === 0) return 'text';
 
+  const cpfCount = validSamples.filter(s => cpfRegex.test(s)).length;
+  if (validSamples.length > 0 && cpfCount / validSamples.length > 0.5) {
+      return 'text';
+  }
+
   for (const sample of validSamples) {
+    if (cpfRegex.test(sample)) {
+      continue;
+    }
+
     if (dateRegex.test(sample) && !isNaN(new Date(sample).getTime())) {
       dateCandidates++;
     }
