@@ -21,7 +21,6 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
-import { AppLogo } from "@/components/icons";
 import { DataTypeIcon } from "@/components/data-type-icon";
 import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search, User, Fingerprint, CircleDollarSign, Star, FileText } from "lucide-react";
 
@@ -299,11 +298,8 @@ export default function SheetSifterApp() {
   };
 
   const renderHeader = () => (
-    <header className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-3">
-          <AppLogo className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-bold font-headline text-slate-800">SheetSifter</h1>
-        </div>
+    <header className="flex items-center justify-between p-4 border-b shrink-0">
+        <h1 className="text-2xl font-bold font-headline text-slate-800">Suas Planilhas</h1>
         {step === 'selection' && (
             <div className="flex items-center gap-2">
                 <Button variant="outline" onClick={handleUploadClick}>
@@ -330,7 +326,7 @@ export default function SheetSifterApp() {
         disabled={isProcessingFile}
         multiple
       />
-      <div className="flex flex-col min-h-screen">
+      <div className="flex flex-col h-full w-full">
         {renderHeader()}
         {step === 'upload' ? (
           <main className="flex-grow flex items-center justify-center p-4">
@@ -357,7 +353,7 @@ export default function SheetSifterApp() {
             </Card>
           </main>
         ) : (
-          <main className="flex-grow p-4 md:p-8">
+          <main className="flex-grow p-4 md:p-8 overflow-y-auto">
             <Card className="w-full mx-auto shadow-lg">
               <CardHeader>
                 <CardTitle className="font-headline text-3xl">Selecione as Colunas e Valide</CardTitle>

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import type { SelectionWithValidation, DetailedReport, SpreadsheetData, Selection } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AppLogo } from '@/components/icons';
 import { ArrowLeft, Search, LoaderCircle, ClipboardCheck, CheckCircle2, XCircle, FilePenLine, FileSpreadsheet, ListChecks, Upload, FileText } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -369,7 +368,7 @@ export default function OperationsPage() {
 
   if (selectedArray.length === 0) {
     return (
-        <div className="flex min-h-screen w-full items-center justify-center bg-background">
+        <div className="flex h-full w-full items-center justify-center bg-background">
             <LoaderCircle className="h-16 w-16 animate-spin text-primary" />
         </div>
     );
@@ -377,18 +376,15 @@ export default function OperationsPage() {
 
   return (
     <TooltipProvider>
-      <div className="flex flex-col min-h-screen">
-        <header className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-3">
-            <AppLogo className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-bold font-headline text-slate-800">SheetSifter</h1>
-          </div>
+      <div className="flex flex-col h-full w-full">
+        <header className="flex items-center justify-between p-4 border-b shrink-0">
+          <h1 className="text-2xl font-bold font-headline text-slate-800">Operações</h1>
           <Button variant="outline" onClick={handleStartOver}>
             <ArrowLeft className="mr-2 h-4 w-4"/>
-            Voltar e Selecionar Novamente
+            Voltar
           </Button>
         </header>
-        <main className="flex-grow p-4 md:p-8 flex items-start justify-center">
+        <main className="flex-grow p-4 md:p-8 flex items-start justify-center overflow-y-auto">
           <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-3 gap-8">
             <Card className="lg:col-span-1 h-fit sticky top-8">
               <CardHeader>
