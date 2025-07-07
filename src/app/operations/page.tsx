@@ -16,36 +16,41 @@ import { getDetailedValidationReportAction, compareAndCorrectAction, generatePay
 import { ValidationResultsDialog } from '@/components/sheetsifter/validation-results-dialog';
 import { OperationOptionsDialog } from '@/components/sheetsifter/operation-options-dialog';
 
-const operations = [
+const allOperations = [
   {
     id: 'vlookup',
     title: 'PROCV (VLOOKUP)',
     description: 'Encontre e exiba dados relacionados de várias colunas. Esta operação é executada em segundo plano.',
     icon: Search,
+    requiresMultipleSources: true,
   },
   {
     id: 'compare-report-only',
     title: 'Comparar Valores (Apenas Relatório)',
     description: 'Use colunas "Chave" para encontrar correspondências e compare os dados em colunas "Valor". Exibe um relatório detalhado.',
     icon: ClipboardCheck,
+    requiresMultipleSources: true,
   },
   {
     id: 'compare-and-correct',
     title: 'Comparar e Corrigir (Baixar Arquivo)',
     description: 'Use uma planilha principal como fonte da verdade. Corrija os valores em outras planilhas e baixe os arquivos corrigidos.',
     icon: FilePenLine,
+    requiresMultipleSources: true,
   },
   {
     id: 'generate-payment-sheet',
     title: 'Gerar planilha de pagamento',
     description: 'Gera uma nova planilha (Nome, CPF, Valor) com base nos valores da planilha principal.',
     icon: FileSpreadsheet,
+    requiresMultipleSources: false,
   },
   {
     id: 'update-payment-sheet',
     title: 'Verificar e Atualizar Planilha de Pagamento',
     description: 'Envie uma planilha de pagamento existente para adicionar novas pessoas da planilha principal.',
     icon: ListChecks,
+    requiresMultipleSources: false,
   },
 ];
 
@@ -366,6 +371,19 @@ export default function OperationsPage() {
 
   const selectedArray = Array.from(selections.values());
 
+  const valueSourcesCount = new Set(
+    selectedArray
+      .filter(s => s.role === 'value')
+      .map(s => `${s.fileName}::${s.worksheetName}`)
+  ).size;
+
+  const operations = allOperations.filter(op => {
+    if (op.requiresMultipleSources) {
+      return valueSourcesCount > 1;
+    }
+    return true;
+  });
+
   if (selectedArray.length === 0) {
     return (
         <div className="flex h-full w-full items-center justify-center bg-background">
@@ -444,7 +462,7 @@ export default function OperationsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4 pr-4">
+                <div className="space-y-4">
                   {operations.map(op => (
                     <button
                       key={op.id}
@@ -462,6 +480,11 @@ export default function OperationsPage() {
                       </div>
                     </button>
                   ))}
+                   {operations.length === 0 && (
+                    <div className="p-4 text-center text-muted-foreground bg-secondary/30 rounded-lg">
+                        <p>Para ver as opções de comparação, selecione colunas de "Valor" em pelo menos duas planilhas diferentes.</p>
+                    </div>
+                  )}
                 </div>
                 
                 {selectedOperation === 'update-payment-sheet' && (
