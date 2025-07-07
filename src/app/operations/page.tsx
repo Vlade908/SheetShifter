@@ -402,126 +402,130 @@ export default function OperationsPage() {
             Voltar
           </Button>
         </header>
-        <main className="flex-1 p-4 md:p-8 flex flex-col overflow-hidden">
-          <div className="w-full max-w-4xl mx-auto flex-1 grid grid-cols-1 lg:grid-cols-3 gap-8 min-h-0">
-            <Card className="lg:col-span-1 flex flex-col">
-              <CardHeader>
-                <CardTitle>Colunas Selecionadas</CardTitle>
-                <CardDescription>{selectedArray.length} colunas no total.</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1 min-h-0">
-                <ScrollArea className="h-full pr-4">
-                  <div className="space-y-4">
-                    {selectedArray.map((selection, index) => (
-                      <div key={index} className="p-3 border rounded-md bg-secondary/30">
-                        <div className="flex items-start justify-between gap-2">
-                            <div className="flex-grow min-w-0">
-                                <p className="font-semibold break-words">{selection.columnName}</p>
-                                <p className="text-sm text-muted-foreground break-words" title={`${selection.fileName} > ${selection.worksheetName}`}>
-                                    <FileText className="h-3 w-3 inline-block mr-1" />
-                                    {selection.fileName} > {selection.worksheetName}
-                                </p>
-                            </div>
-                            {selection.validationResult && (
-                                <Tooltip>
-                                    <TooltipTrigger>
-                                        {selection.validationResult.isValid ? (
-                                            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-500 shrink-0" />
-                                        ) : (
-                                            <XCircle className="h-5 w-5 text-destructive shrink-0" />
-                                        )}
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p className="max-w-xs">{selection.validationResult.reason}</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            )}
-                        </div>
-
-                        <div className="flex items-center gap-4 mt-2">
-                          <div className="flex items-center gap-2">
-                            <DataTypeIcon type={selection.dataType} className="h-4 w-4" />
-                            <Badge variant="outline" className="capitalize">{selection.dataType}</Badge>
+        <main className="flex-1 overflow-hidden">
+          <div className="p-4 md:p-8 h-full">
+            <div className="w-full max-w-4xl mx-auto h-full grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+              <Card className="lg:col-span-1 flex flex-col">
+                <CardHeader>
+                  <CardTitle>Colunas Selecionadas</CardTitle>
+                  <CardDescription>{selectedArray.length} colunas no total.</CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1 min-h-0">
+                  <ScrollArea className="h-full pr-4">
+                    <div className="space-y-4">
+                      {selectedArray.map((selection, index) => (
+                        <div key={index} className="p-3 border rounded-md bg-secondary/30">
+                          <div className="flex items-start justify-between gap-2">
+                              <div className="flex-grow min-w-0">
+                                  <p className="font-semibold break-words">{selection.columnName}</p>
+                                  <p className="text-sm text-muted-foreground break-words" title={`${selection.fileName} > ${selection.worksheetName}`}>
+                                      <FileText className="h-3 w-3 inline-block mr-1" />
+                                      {selection.fileName} > {selection.worksheetName}
+                                  </p>
+                              </div>
+                              {selection.validationResult && (
+                                  <Tooltip>
+                                      <TooltipTrigger>
+                                          {selection.validationResult.isValid ? (
+                                              <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-500 shrink-0" />
+                                          ) : (
+                                              <XCircle className="h-5 w-5 text-destructive shrink-0" />
+                                          )}
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                          <p className="max-w-xs">{selection.validationResult.reason}</p>
+                                      </TooltipContent>
+                                  </Tooltip>
+                              )}
                           </div>
-                          {selection.role && (
-                             <Badge variant={selection.role === 'key' ? 'default' : 'secondary'} className="capitalize">{selection.role}</Badge>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
 
-            <Card className="lg:col-span-2 flex flex-col">
-              <CardHeader>
-                <CardTitle className="font-headline text-3xl">O que você gostaria de fazer?</CardTitle>
-                <CardDescription>
-                  Escolha uma das operações abaixo para aplicar às suas colunas selecionadas.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1 flex flex-col min-h-0">
-                <div className="flex-1 min-h-0">
-                    <ScrollArea className="h-full pr-4">
-                        <div className="space-y-4">
-                        {operations.map(op => (
-                            <button
-                            key={op.id}
-                            onClick={() => setSelectedOperation(op.id)}
-                            className={cn(
-                                "w-full p-4 border rounded-lg text-left flex items-start gap-4 transition-all",
-                                "hover:bg-accent hover:text-accent-foreground",
-                                selectedOperation === op.id ? "bg-accent text-accent-foreground ring-2 ring-primary" : "bg-transparent"
+                          <div className="flex items-center gap-4 mt-2">
+                            <div className="flex items-center gap-2">
+                              <DataTypeIcon type={selection.dataType} className="h-4 w-4" />
+                              <Badge variant="outline" className="capitalize">{selection.dataType}</Badge>
+                            </div>
+                            {selection.role && (
+                               <Badge variant={selection.role === 'key' ? 'default' : 'secondary'} className="capitalize">{selection.role}</Badge>
                             )}
-                            >
-                            <op.icon className="h-8 w-8 text-primary mt-1 shrink-0" />
-                            <div>
-                                <h3 className="text-lg font-semibold">{op.title}</h3>
-                                <p className="text-muted-foreground">{op.description}</p>
-                            </div>
-                            </button>
-                        ))}
-                        {operations.length === 0 && (
-                            <div className="p-4 text-center text-muted-foreground bg-secondary/30 rounded-lg">
-                                <p>Para ver as opções de comparação, selecione colunas de "Valor" em pelo menos duas planilhas diferentes.</p>
-                            </div>
-                        )}
+                          </div>
                         </div>
-                        
-                        {selectedOperation === 'update-payment-sheet' && (
-                        <div className="mt-6 p-4 border-dashed border-2 rounded-lg text-center bg-secondary/30">
-                            <h4 className="font-semibold mb-2">Enviar Planilha Existente</h4>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                    setExistingPaymentFile(file);
-                                    toast({ title: 'Arquivo Selecionado', description: file.name });
-                                }
-                            }}
-                                className="hidden"
-                                accept=".xlsx,.xls,.ods,.csv"
-                            />
-                            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                                <Upload className="mr-2 h-4 w-4" />
-                                {existingPaymentFile ? 'Trocar Arquivo' : 'Selecionar Arquivo'}
-                            </Button>
-                            {existingPaymentFile && <p className="text-sm mt-2 text-muted-foreground">Arquivo: {existingPaymentFile.name}</p>}
-                            </div>
-                        )}
-                    </ScrollArea>
-                </div>
-                <div className="flex justify-end pt-6 shrink-0 border-t">
-                  <Button size="lg" onClick={handleExecuteOperation} disabled={!selectedOperation || isExecuting}>
-                    {isExecuting ? <LoaderCircle className="animate-spin mr-2" /> : null}
-                    Executar Operação
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+
+              <Card className="lg:col-span-2 flex flex-col">
+                <CardHeader>
+                  <CardTitle className="font-headline text-3xl">O que você gostaria de fazer?</CardTitle>
+                  <CardDescription>
+                    Escolha uma das operações abaixo para aplicar às suas colunas selecionadas.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1 flex flex-col min-h-0">
+                  <div className="flex-1 min-h-0">
+                      <ScrollArea className="h-full pr-4">
+                          <div className="space-y-4">
+                          {operations.map(op => (
+                              <button
+                              key={op.id}
+                              onClick={() => setSelectedOperation(op.id)}
+                              className={cn(
+                                  "w-full p-4 border rounded-lg text-left flex items-start gap-4 transition-all",
+                                  "hover:bg-accent hover:text-accent-foreground",
+                                  selectedOperation === op.id ? "bg-accent text-accent-foreground ring-2 ring-primary" : "bg-transparent"
+                              )}
+                              >
+                              <op.icon className="h-8 w-8 text-primary mt-1 shrink-0" />
+                              <div>
+                                  <h3 className="text-lg font-semibold">{op.title}</h3>
+                                  <p className="text-muted-foreground">{op.description}</p>
+                              </div>
+                              </button>
+                          ))}
+                          {operations.length === 0 && (
+                              <div className="p-4 text-center text-muted-foreground bg-secondary/30 rounded-lg">
+                                  <p>Para ver as opções de comparação, selecione colunas de "Valor" em pelo menos duas planilhas diferentes.</p>
+                              </div>
+                          )}
+                          </div>
+                          
+                          {selectedOperation === 'update-payment-sheet' && (
+                          <div className="mt-6 p-4 border-dashed border-2 rounded-lg text-center bg-secondary/30">
+                              <h4 className="font-semibold mb-2">Enviar Planilha Existente</h4>
+                              <input
+                                  type="file"
+                                  ref={fileInputRef}
+                                  onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                      setExistingPaymentFile(file);
+                                      toast({ title: 'Arquivo Selecionado', description: file.name });
+                                  }
+                              }}
+                                  className="hidden"
+                                  accept=".xlsx,.xls,.ods,.csv"
+                              />
+                              <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                                  <Upload className="mr-2 h-4 w-4" />
+                                  {existingPaymentFile ? 'Trocar Arquivo' : 'Selecionar Arquivo'}
+                              </Button>
+                              {existingPaymentFile && <p className="text-sm mt-2 text-muted-foreground">Arquivo: {existingPaymentFile.name}</p>}
+                              </div>
+                          )}
+                      </ScrollArea>
+                  </div>
+                  <div className="flex justify-end pt-6 shrink-0 border-t">
+                    <Button size="lg" onClick={handleExecuteOperation} disabled={!selectedOperation || isExecuting}>
+                      {isExecuting ? <LoaderCircle className="animate-spin mr-2" /> : null}
+                      Executar Operação
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+            </div>
           </div>
         </main>
         <ValidationResultsDialog 
