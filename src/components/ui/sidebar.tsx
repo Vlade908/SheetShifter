@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { VariantProps, cva } from "class-variance-authority"
-import { PanelLeft } from "lucide-react"
+import { PanelLeft, ChevronLeft } from "lucide-react"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -300,16 +300,16 @@ const SidebarRail = React.forwardRef<
       onClick={toggleSidebar}
       title="Toggle Sidebar"
       className={cn(
-        "absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border group-data-[side=left]:-right-4 group-data-[side=right]:left-0 sm:flex",
-        "[[data-side=left]_&]:cursor-w-resize [[data-side=right]_&]:cursor-e-resize",
-        "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
-        "group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full group-data-[collapsible=offcanvas]:hover:bg-sidebar",
-        "[[data-side=left][data-collapsible=offcanvas]_&]:-right-2",
-        "[[data-side=right][data-collapsible=offcanvas]_&]:-left-2",
+        "absolute top-1/2 z-20 hidden h-20 w-5 -translate-y-1/2 items-center justify-center rounded-full border border-sidebar-border bg-sidebar p-0 transition-colors duration-200 ease-linear hover:bg-sidebar-accent sm:flex",
+        "group-data-[collapsible=offcanvas]:hidden",
+        "group-data-[side=left]:right-0 group-data-[side=left]:translate-x-1/2 group-data-[side=left]:rounded-l-none group-data-[side=left]:border-l-0",
+        "group-data-[side=right]:left-0 group-data-[side=right]:-translate-x-1/2 group-data-[side=right]:rounded-r-none group-data-[side=right]:border-r-0",
         className
       )}
       {...props}
-    />
+    >
+      <ChevronLeft className="h-4 w-4 text-sidebar-foreground transition-transform duration-200 group-data-[state=collapsed]:rotate-180 group-data-[side=right]:rotate-180 group-data-[state=collapsed]:group-data-[side=right]:rotate-0" />
+    </button>
   )
 })
 SidebarRail.displayName = "SidebarRail"
