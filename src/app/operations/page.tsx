@@ -402,8 +402,7 @@ export default function OperationsPage() {
             Voltar
           </Button>
         </header>
-        <main className="flex-1 overflow-hidden">
-          <div className="p-4 md:p-8 h-full">
+        <main className="flex-1 overflow-hidden p-4 md:p-8">
             <div className="w-full max-w-4xl mx-auto h-full grid grid-cols-1 lg:grid-cols-3 gap-8">
             
               <Card className="lg:col-span-1 flex flex-col">
@@ -526,7 +525,6 @@ export default function OperationsPage() {
               </Card>
 
             </div>
-          </div>
         </main>
         <ValidationResultsDialog 
             isOpen={isModalOpen} 
