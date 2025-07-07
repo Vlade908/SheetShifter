@@ -402,9 +402,9 @@ export default function OperationsPage() {
             Voltar
           </Button>
         </header>
-        <main className="flex-grow p-4 md:p-8 flex items-start justify-center overflow-y-auto">
-          <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <Card className="lg:col-span-1 sticky top-8 flex flex-col max-h-[calc(100vh-6rem)]">
+        <main className="flex-grow p-4 md:p-8 overflow-hidden">
+          <div className="w-full max-w-4xl mx-auto h-full grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <Card className="lg:col-span-1 flex flex-col h-full">
               <CardHeader>
                 <CardTitle>Colunas Selecionadas</CardTitle>
                 <CardDescription>{selectedArray.length} colunas no total.</CardDescription>
@@ -454,64 +454,67 @@ export default function OperationsPage() {
               </CardContent>
             </Card>
 
-            <Card className="lg:col-span-2">
+            <Card className="lg:col-span-2 flex flex-col h-full">
               <CardHeader>
                 <CardTitle className="font-headline text-3xl">O que você gostaria de fazer?</CardTitle>
                 <CardDescription>
                   Escolha uma das operações abaixo para aplicar às suas colunas selecionadas.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {operations.map(op => (
-                    <button
-                      key={op.id}
-                      onClick={() => setSelectedOperation(op.id)}
-                      className={cn(
-                        "w-full p-4 border rounded-lg text-left flex items-start gap-4 transition-all",
-                        "hover:bg-accent hover:text-accent-foreground",
-                        selectedOperation === op.id ? "bg-accent text-accent-foreground ring-2 ring-primary" : "bg-transparent"
-                      )}
-                    >
-                      <op.icon className="h-8 w-8 text-primary mt-1 shrink-0" />
-                      <div>
-                        <h3 className="text-lg font-semibold">{op.title}</h3>
-                        <p className="text-muted-foreground">{op.description}</p>
-                      </div>
-                    </button>
-                  ))}
-                   {operations.length === 0 && (
-                    <div className="p-4 text-center text-muted-foreground bg-secondary/30 rounded-lg">
-                        <p>Para ver as opções de comparação, selecione colunas de "Valor" em pelo menos duas planilhas diferentes.</p>
-                    </div>
-                  )}
+              <CardContent className="flex flex-col flex-grow min-h-0">
+                <div className="flex-grow min-h-0">
+                    <ScrollArea className="h-full pr-4">
+                        <div className="space-y-4">
+                        {operations.map(op => (
+                            <button
+                            key={op.id}
+                            onClick={() => setSelectedOperation(op.id)}
+                            className={cn(
+                                "w-full p-4 border rounded-lg text-left flex items-start gap-4 transition-all",
+                                "hover:bg-accent hover:text-accent-foreground",
+                                selectedOperation === op.id ? "bg-accent text-accent-foreground ring-2 ring-primary" : "bg-transparent"
+                            )}
+                            >
+                            <op.icon className="h-8 w-8 text-primary mt-1 shrink-0" />
+                            <div>
+                                <h3 className="text-lg font-semibold">{op.title}</h3>
+                                <p className="text-muted-foreground">{op.description}</p>
+                            </div>
+                            </button>
+                        ))}
+                        {operations.length === 0 && (
+                            <div className="p-4 text-center text-muted-foreground bg-secondary/30 rounded-lg">
+                                <p>Para ver as opções de comparação, selecione colunas de "Valor" em pelo menos duas planilhas diferentes.</p>
+                            </div>
+                        )}
+                        </div>
+                        
+                        {selectedOperation === 'update-payment-sheet' && (
+                        <div className="mt-6 p-4 border-dashed border-2 rounded-lg text-center bg-secondary/30">
+                            <h4 className="font-semibold mb-2">Enviar Planilha Existente</h4>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                    setExistingPaymentFile(file);
+                                    toast({ title: 'Arquivo Selecionado', description: file.name });
+                                }
+                            }}
+                                className="hidden"
+                                accept=".xlsx,.xls,.ods,.csv"
+                            />
+                            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                                <Upload className="mr-2 h-4 w-4" />
+                                {existingPaymentFile ? 'Trocar Arquivo' : 'Selecionar Arquivo'}
+                            </Button>
+                            {existingPaymentFile && <p className="text-sm mt-2 text-muted-foreground">Arquivo: {existingPaymentFile.name}</p>}
+                            </div>
+                        )}
+                    </ScrollArea>
                 </div>
-                
-                {selectedOperation === 'update-payment-sheet' && (
-                  <div className="mt-6 p-4 border-dashed border-2 rounded-lg text-center bg-secondary/30">
-                      <h4 className="font-semibold mb-2">Enviar Planilha Existente</h4>
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                              setExistingPaymentFile(file);
-                              toast({ title: 'Arquivo Selecionado', description: file.name });
-                          }
-                      }}
-                        className="hidden"
-                        accept=".xlsx,.xls,.ods,.csv"
-                      />
-                      <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                        <Upload className="mr-2 h-4 w-4" />
-                        {existingPaymentFile ? 'Trocar Arquivo' : 'Selecionar Arquivo'}
-                      </Button>
-                      {existingPaymentFile && <p className="text-sm mt-2 text-muted-foreground">Arquivo: {existingPaymentFile.name}</p>}
-                    </div>
-                )}
-
-                <div className="flex justify-end mt-6">
+                <div className="flex justify-end pt-6 shrink-0 border-t">
                   <Button size="lg" onClick={handleExecuteOperation} disabled={!selectedOperation || isExecuting}>
                     {isExecuting ? <LoaderCircle className="animate-spin mr-2" /> : null}
                     Executar Operação
