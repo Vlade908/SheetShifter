@@ -404,13 +404,13 @@ export default function OperationsPage() {
         </header>
         <main className="flex-grow p-4 md:p-8 flex items-start justify-center overflow-y-auto">
           <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <Card className="lg:col-span-1 h-fit sticky top-8">
+            <Card className="lg:col-span-1 sticky top-8 flex flex-col max-h-[calc(100vh-6rem)]">
               <CardHeader>
                 <CardTitle>Colunas Selecionadas</CardTitle>
                 <CardDescription>{selectedArray.length} colunas no total.</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-auto max-h-[60vh] pr-4">
+              <CardContent className="flex-grow min-h-0">
+                <ScrollArea className="h-full pr-4">
                   <div className="space-y-4">
                     {selectedArray.map((selection, index) => (
                       <div key={index} className="p-3 border rounded-md bg-secondary/30">
