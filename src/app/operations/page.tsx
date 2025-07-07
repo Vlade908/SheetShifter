@@ -463,8 +463,8 @@ export default function OperationsPage() {
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col min-h-0">
                   <div className="flex-1 min-h-0">
-                      <ScrollArea className="h-full pr-4">
-                          <div className="space-y-4">
+                      <ScrollArea className="h-full">
+                          <div className="space-y-4 p-1 pr-4">
                           {operations.map(op => (
                               <button
                               key={op.id}
