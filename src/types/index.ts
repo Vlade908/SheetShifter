@@ -66,3 +66,22 @@ export interface DetailedReport {
     duplicateKeys: number;
   };
 }
+
+
+export interface SavedColumnSelection {
+  columnName: string;
+  dataType: DataType;
+  role?: 'key' | 'value' | 'cpf';
+}
+
+export interface SavedWorksheetConfig {
+  worksheetName: string;
+  headerRow: number;
+  isPrimary: boolean;
+  selections: SavedColumnSelection[];
+}
+
+export interface SavedSpreadsheetConfig {
+  fileName: string;
+  worksheetConfigs: SavedWorksheetConfig[];
+}

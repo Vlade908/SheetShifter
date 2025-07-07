@@ -3,10 +3,12 @@
 import React, { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
 import * as XLSX from 'xlsx';
-import type { DataType, SelectionWithValidation, SpreadsheetData, Worksheet, Column } from "@/types";
+import type { DataType, SelectionWithValidation, SpreadsheetData, Worksheet, Column, SavedSpreadsheetConfig } from "@/types";
 import { validateSelectionsAction, type ValidationRequest } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { loadConfig, saveConfig } from '@/lib/config-storage';
+import { ApplyConfigDialog } from '@/components/sheetsifter/apply-config-dialog';
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +24,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
 import { DataTypeIcon } from "@/components/data-type-icon";
-import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search, User, Fingerprint, CircleDollarSign, Star, FileText } from "lucide-react";
+import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search, User, Fingerprint, CircleDollarSign, Star, FileText, Save } from "lucide-react";
 
 function extractColumns(data: any[][], headerRow: number): Column[] {
   if (data.length < headerRow) {
@@ -68,6 +70,9 @@ export default function SheetSifterApp() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  
+  const [foundConfig, setFoundConfig] = useState<SavedSpreadsheetConfig | null>(null);
+  const [isConfigModalOpen, setConfigModalOpen] = useState(false);
 
   const dataTypes: DataType[] = ['text', 'number', 'date', 'currency'];
 
@@ -79,7 +84,6 @@ export default function SheetSifterApp() {
         setIsProcessingFile(true);
     });
 
-    // Timeout to allow UI to update before heavy processing
     setTimeout(async () => {
         const filePromises = Array.from(files).map(file => {
         return new Promise<SpreadsheetData>((resolve, reject) => {
@@ -129,6 +133,16 @@ export default function SheetSifterApp() {
             });
         }
         setStep("selection");
+
+        // Check for saved configs for the newly added files
+        const firstNewFile = newSpreadsheetData[0];
+        if (firstNewFile) {
+            const config = loadConfig(firstNewFile.fileName);
+            if (config) {
+                setFoundConfig(config);
+                setConfigModalOpen(true);
+            }
+        }
 
         } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -228,6 +242,90 @@ export default function SheetSifterApp() {
     }
   };
 
+  const handleSaveConfig = () => {
+    if (spreadsheetData.length === 0) return;
+  
+    spreadsheetData.forEach(file => {
+      const config: SavedSpreadsheetConfig = {
+        fileName: file.fileName,
+        worksheetConfigs: file.worksheets.map(ws => {
+          
+          const worksheetSelections = Array.from(selections.values()).filter(
+            sel => sel.fileName === file.fileName && sel.worksheetName === ws.name
+          );
+  
+          const savedSelections = worksheetSelections.map(sel => ({
+            columnName: sel.columnName,
+            dataType: sel.dataType,
+            role: sel.role,
+          }));
+  
+          const isPrimary = primaryWorksheet?.fileName === file.fileName && primaryWorksheet?.worksheetName === ws.name;
+  
+          return {
+            worksheetName: ws.name,
+            headerRow: ws.headerRow,
+            isPrimary: isPrimary,
+            selections: savedSelections,
+          };
+        })
+      };
+      saveConfig(file.fileName, config);
+    });
+  
+    toast({ title: "Configuração Salva", description: "Suas configurações de planilha foram salvas no seu navegador." });
+  };
+
+  const applyConfiguration = () => {
+    if (!foundConfig) return;
+
+    const newSelections = new Map<string, SelectionWithValidation>();
+    let newPrimaryWorksheet = primaryWorksheet;
+
+    const newSpreadsheetData = spreadsheetData.map(file => {
+        if (file.fileName !== foundConfig.fileName) return file;
+
+        const newWorksheets = file.worksheets.map(ws => {
+            const wsConfig = foundConfig.worksheetConfigs.find(c => c.worksheetName === ws.name);
+            if (!wsConfig) return ws;
+
+            if (wsConfig.isPrimary) {
+                newPrimaryWorksheet = { fileName: file.fileName, worksheetName: ws.name };
+            }
+
+            const newColumns = extractColumns(ws.data, wsConfig.headerRow);
+            
+            wsConfig.selections.forEach(savedSel => {
+                const colIndex = newColumns.findIndex(c => c.name === savedSel.columnName);
+                if (colIndex !== -1) {
+                    const column = newColumns[colIndex];
+                    const key = `${file.fileName}-${ws.name}-${colIndex}`;
+                    newSelections.set(key, {
+                        fileName: file.fileName,
+                        worksheetName: ws.name,
+                        columnName: column.name,
+                        sampleData: column.sampleData || [],
+                        fullData: column.fullData || [],
+                        dataType: savedSel.dataType,
+                        role: savedSel.role,
+                        isValidating: false,
+                    });
+                }
+            });
+
+            return { ...ws, headerRow: wsConfig.headerRow, columns: newColumns };
+        });
+
+        return { ...file, worksheets: newWorksheets };
+    });
+
+    setSpreadsheetData(newSpreadsheetData);
+    setSelections(newSelections);
+    setPrimaryWorksheet(newPrimaryWorksheet);
+    setFoundConfig(null);
+    toast({ title: "Configuração Aplicada", description: "As configurações salvas foram aplicadas com sucesso." });
+  };
+  
   const handleValidateAndProceed = () => {
     if (selections.size === 0) {
       toast({
@@ -524,7 +622,11 @@ export default function SheetSifterApp() {
                       </TabsContent>
                   ))}
                 </Tabs>
-                <div className="flex justify-end mt-6">
+                <div className="flex justify-end items-center gap-2 mt-6">
+                  <Button variant="outline" onClick={handleSaveConfig} disabled={isPending || spreadsheetData.length === 0}>
+                    <Save className="mr-2 h-4 w-4" />
+                    Salvar Configuração
+                  </Button>
                   <Button size="lg" onClick={handleValidateAndProceed} disabled={isPending || selections.size === 0}>
                     {isPending ? (
                       <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
@@ -539,6 +641,12 @@ export default function SheetSifterApp() {
           </main>
         )}
       </div>
+      <ApplyConfigDialog
+        isOpen={isConfigModalOpen}
+        onOpenChange={setConfigModalOpen}
+        onConfirm={applyConfiguration}
+        fileName={foundConfig?.fileName ?? null}
+      />
     </TooltipProvider>
   );
 }
