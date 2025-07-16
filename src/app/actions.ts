@@ -396,6 +396,7 @@ export async function compareAndCorrectAction(
 export async function generatePaymentSheetAction(
   selections: Selection[],
   primaryWorksheet: PrimaryWorksheet,
+  options: ReportOptions = {}
 ): Promise<CorrectedFile | null> {
   const primarySelections = selections.filter(s => s.fileName === primaryWorksheet.fileName && s.worksheetName === primaryWorksheet.worksheetName);
 
@@ -408,12 +409,19 @@ export async function generatePaymentSheetAction(
   }
 
   const paymentData: (string | number)[][] = [['Nome', 'CPF', 'Valor']];
+  const filterThreshold = options.filterGreaterThan;
 
   for (let i = 0; i < nomeCol.fullData.length; i++) {
     const valorStr = valorCol.fullData[i];
     const valorNum = parseCurrency(valorStr);
 
-    if (!isNaN(valorNum) && valorNum >= 0) {
+    if (isNaN(valorNum)) continue;
+
+    const passesFilter = filterThreshold !== undefined
+      ? valorNum >= filterThreshold
+      : valorNum > 0;
+
+    if (passesFilter) {
       const nome = nomeCol.fullData[i];
       const cpf = cpfCol.fullData[i];
       paymentData.push([nome, cpf, valorNum]);

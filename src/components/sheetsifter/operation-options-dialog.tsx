@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -18,18 +18,23 @@ interface OperationOptionsDialogProps {
 export function OperationOptionsDialog({ isOpen, onOpenChange, onExecute, operationId }: OperationOptionsDialogProps) {
   const [filterValue, setFilterValue] = useState('');
 
+  useEffect(() => {
+    if (!isOpen) {
+        setFilterValue('');
+    }
+  }, [isOpen]);
+
   const handleExecute = () => {
     const options: ReportOptions = {};
     const numValue = parseFloat(filterValue);
-    if ((operationId === 'compare-report-only' || operationId === 'compare-and-correct') && !isNaN(numValue)) {
+    if (!isNaN(numValue)) {
       options.filterGreaterThan = numValue;
     }
     onExecute(options);
     onOpenChange(false);
-    setFilterValue('');
   };
 
-  const isFilterVisible = operationId === 'compare-report-only' || operationId === 'compare-and-correct';
+  const isFilterVisible = operationId === 'compare-report-only' || operationId === 'compare-and-correct' || operationId === 'generate-payment-sheet';
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -52,7 +57,7 @@ export function OperationOptionsDialog({ isOpen, onOpenChange, onExecute, operat
                 value={filterValue}
                 onChange={(e) => setFilterValue(e.target.value)}
                 className="col-span-4"
-                placeholder="Ex: 100"
+                placeholder="Ex: 100 (deixe em branco para incluir valores > 0)"
               />
             </div>
           </div>

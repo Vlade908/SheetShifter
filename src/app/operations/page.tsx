@@ -200,33 +200,18 @@ export default function OperationsPage() {
     });
   };
 
-  const executeGeneratePaymentSheet = () => {
+  const executeGeneratePaymentSheet = (options: ReportOptions) => {
     if (!primaryWorksheet) {
       toast({ variant: 'destructive', title: 'Nenhuma Planilha Principal', description: 'Por favor, marque uma planilha como principal (usando a estrela).' });
       return;
     }
     
-    const allSelections = Array.from(selections.values());
-    const primarySelections = allSelections.filter(s => s.fileName === primaryWorksheet.fileName && s.worksheetName === primaryWorksheet.worksheetName);
-
-    const hasNome = primarySelections.some(s => s.role === 'key');
-    const hasCPF = primarySelections.some(s => s.role === 'cpf');
-    const hasValor = primarySelections.some(s => s.role === 'value');
-
-    if (!hasNome || !hasCPF || !hasValor) {
-        toast({
-            variant: 'destructive',
-            title: 'Seleção Incompleta',
-            description: 'Para gerar la planilha de pagamento, selecione colunas para "Nome (Chave)", "CPF" e "Valor" na planilha principal.',
-        });
-        return;
-    }
-
     startExecuting(async () => {
         try {
             const paymentFile = await generatePaymentSheetAction(
                 Array.from(selections.values()), 
                 primaryWorksheet,
+                options
             );
             
             if (paymentFile) {
@@ -238,7 +223,7 @@ export default function OperationsPage() {
                 document.body.removeChild(link);
                 toast({ title: "Planilha Gerada", description: `A planilha "${paymentFile.fileName}" foi baixada.` });
             } else {
-                toast({ title: "Nenhum Pagamento a Gerar", description: "Nenhuma linha na planilha principal tinha um valor maior que zero." });
+                toast({ title: "Nenhum Pagamento a Gerar", description: "Nenhuma linha na planilha principal atendeu aos critérios do filtro." });
             }
 
         } catch (error) {
@@ -311,11 +296,15 @@ export default function OperationsPage() {
       executeCompareReportOnly(options);
     } else if (selectedOperation === 'compare-and-correct') {
       executeCompareAndCorrect(options);
+    } else if (selectedOperation === 'generate-payment-sheet') {
+      executeGeneratePaymentSheet(options);
     }
   };
 
   const executeOperation = (operationToExecute: string | null) => {
     if (!operationToExecute) return;
+    
+    setSelectedOperation(operationToExecute);
 
     if (operationToExecute === 'vlookup') {
       toast({
@@ -325,47 +314,68 @@ export default function OperationsPage() {
       return;
     }
 
-    if (operationToExecute === 'generate-payment-sheet') {
-      executeGeneratePaymentSheet();
-      return;
-    }
-
     if (operationToExecute === 'update-payment-sheet') {
-      executeUpdatePaymentSheet();
+      executeUpdatePaymentSheet(); // This one has its own UI for file upload, no options modal needed
       return;
     }
 
-    const allSelections = Array.from(selections.values());
-    const keys = allSelections.filter(s => s.role === 'key');
-    const values = allSelections.filter(s => s.role === 'value');
+    // --- Validation for operations that need options modal ---
 
-    if (keys.length < 1 || values.length < 1) {
-        toast({
-            variant: 'destructive',
-            title: 'Seleção Incompleta',
-            description: 'Para comparar, selecione pelo menos uma coluna "Chave" e uma "Valor".',
-        });
-        return;
-    }
-    
-    if (operationToExecute === 'compare-report-only') {
-      if (keys.length < 2 || values.length < 2) {
-          toast({
-              variant: 'destructive',
-              title: 'Seleção Incompleta',
-              description: 'Para comparar valores, selecione pelo menos duas colunas "Chave" e duas colunas "Valor" entre os arquivos/planilhas.',
-          });
-          return;
-      }
-    }
-    
-    if (operationToExecute === 'compare-and-correct') {
-      if (!primaryWorksheet) {
-        toast({ variant: 'destructive', title: 'Nenhuma Planilha Principal', description: 'Por favor, volte e marque uma planilha como principal (usando a estrela) para usar como fonte da verdade.' });
-        return;
-      }
+    if (operationToExecute === 'generate-payment-sheet') {
+        if (!primaryWorksheet) {
+            toast({ variant: 'destructive', title: 'Nenhuma Planilha Principal', description: 'Por favor, marque uma planilha como principal (usando a estrela).' });
+            return;
+        }
+        const allSelections = Array.from(selections.values());
+        const primarySelections = allSelections.filter(s => s.fileName === primaryWorksheet.fileName && s.worksheetName === primaryWorksheet.worksheetName);
+        const hasNome = primarySelections.some(s => s.role === 'key');
+        const hasCPF = primarySelections.some(s => s.role === 'cpf');
+        const hasValor = primarySelections.some(s => s.role === 'value');
+        if (!hasNome || !hasCPF || !hasValor) {
+            toast({
+                variant: 'destructive',
+                title: 'Seleção Incompleta',
+                description: 'Para gerar la planilha de pagamento, selecione colunas para "Nome (Chave)", "CPF" e "Valor" na planilha principal.',
+            });
+            return;
+        }
     }
 
+
+    if (operationToExecute === 'compare-report-only' || operationToExecute === 'compare-and-correct') {
+        const allSelections = Array.from(selections.values());
+        const keys = allSelections.filter(s => s.role === 'key');
+        const values = allSelections.filter(s => s.role === 'value');
+
+        if (keys.length < 1 || values.length < 1) {
+            toast({
+                variant: 'destructive',
+                title: 'Seleção Incompleta',
+                description: 'Para comparar, selecione pelo menos uma coluna "Chave" e uma "Valor".',
+            });
+            return;
+        }
+        
+        if (operationToExecute === 'compare-report-only') {
+            if (keys.length < 2 || values.length < 2) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Seleção Incompleta',
+                    description: 'Para comparar valores, selecione pelo menos duas colunas "Chave" e duas colunas "Valor" entre os arquivos/planilhas.',
+                });
+                return;
+            }
+        }
+        
+        if (operationToExecute === 'compare-and-correct') {
+            if (!primaryWorksheet) {
+                toast({ variant: 'destructive', title: 'Nenhuma Planilha Principal', description: 'Por favor, volte e marque uma planilha como principal (usando a estrela) para usar como fonte da verdade.' });
+                return;
+            }
+        }
+    }
+    
+    // All checks passed, open the options modal
     setOptionsModalOpen(true);
   };
 
@@ -374,7 +384,6 @@ export default function OperationsPage() {
   }
 
   const handleOperationDoubleClick = (opId: string) => {
-    setSelectedOperation(opId);
     executeOperation(opId);
   }
 
