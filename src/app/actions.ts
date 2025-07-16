@@ -413,7 +413,7 @@ export async function generatePaymentSheetAction(
     const valorStr = valorCol.fullData[i];
     const valorNum = parseCurrency(valorStr);
 
-    if (!isNaN(valorNum) && valorNum > 0) {
+    if (!isNaN(valorNum) && valorNum >= 0) {
       const nome = nomeCol.fullData[i];
       const cpf = cpfCol.fullData[i];
       paymentData.push([nome, cpf, valorNum]);
@@ -421,7 +421,7 @@ export async function generatePaymentSheetAction(
   }
 
   if (paymentData.length <= 1) {
-    return null; // No rows with value > 0
+    return null; // No rows with valid value
   }
 
   const ws = XLSX.utils.aoa_to_sheet(paymentData);
