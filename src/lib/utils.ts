@@ -10,7 +10,7 @@ export function parseCurrency(value: string | number | null | undefined): number
   if (typeof value === 'number') return value;
 
   const strValue = String(value).trim();
-  if (strValue === '#N/DISP') {
+  if (strValue.toUpperCase() === '#N/DISP') {
     return 0;
   }
 
@@ -32,6 +32,7 @@ export function parseCurrency(value: string | number | null | undefined): number
     // Remove commas (thousands separators).
     cleanedValue = cleanedValue.replace(/,/g, '');
   }
-
-  return parseFloat(cleanedValue);
+  
+  const parsed = parseFloat(cleanedValue);
+  return isFinite(parsed) ? parsed : NaN;
 }
