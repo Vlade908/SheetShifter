@@ -49,11 +49,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   <SidebarMenuButton
                     asChild
                     isActive={pathname === '/' || pathname.startsWith('/operations')}
-                    tooltip="Planilhas"
+                    tooltip="Subsidio"
                   >
                     <Link href="/">
                       <SheetIcon />
-                      <span className="group-data-[state=collapsed]:hidden">Planilhas</span>
+                      <span className="group-data-[state=collapsed]:hidden">Subsidio</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
