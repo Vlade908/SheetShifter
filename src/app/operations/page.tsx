@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useTransition, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { SelectionWithValidation, DetailedReport, SpreadsheetData, Selection } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,6 +59,8 @@ type PrimaryWorksheet = { fileName: string, worksheetName: string };
 
 export default function OperationsPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [selections, setSelections] = useState<Map<string, SelectionWithValidation>>(new Map());
   const [spreadsheetData, setSpreadsheetData] = useState<SpreadsheetData[]>([]);
@@ -71,19 +73,23 @@ export default function OperationsPage() {
   const [reportOptions, setReportOptions] = useState<ReportOptions>({});
   const [existingPaymentFile, setExistingPaymentFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const pageKey = searchParams.get('pageKey') || 'default';
+  const getStorageKey = (key: string) => `${pageKey}_${key}`;
+  const baseRoute = pageKey === 'passe' ? '/passe' : '/';
 
 
   useEffect(() => {
     try {
-      const storedSelections = sessionStorage.getItem('selections');
-      const storedSpreadsheetData = sessionStorage.getItem('spreadsheetData');
-      const storedPrimaryWorksheet = sessionStorage.getItem('primaryWorksheet');
+      const storedSelections = sessionStorage.getItem(getStorageKey('selections'));
+      const storedSpreadsheetData = sessionStorage.getItem(getStorageKey('spreadsheetData'));
+      const storedPrimaryWorksheet = sessionStorage.getItem(getStorageKey('primaryWorksheet'));
 
       if (storedSelections) {
         const parsedSelections: [string, SelectionWithValidation][] = JSON.parse(storedSelections);
         setSelections(new Map(parsedSelections));
       } else {
-        router.push('/');
+        router.push(baseRoute);
       }
 
       if (storedSpreadsheetData) {
@@ -95,13 +101,15 @@ export default function OperationsPage() {
 
     } catch (error) {
       console.error("Failed to parse data from sessionStorage", error);
-      router.push('/');
+      router.push(baseRoute);
     }
-  }, [router]);
+  }, [router, pageKey, baseRoute]);
 
   const handleStartOver = () => {
-    sessionStorage.clear();
-    router.push('/');
+    sessionStorage.removeItem(getStorageKey('selections'));
+    sessionStorage.removeItem(getStorageKey('spreadsheetData'));
+    sessionStorage.removeItem(getStorageKey('primaryWorksheet'));
+    router.push(baseRoute);
   };
 
   const executeCompareReportOnly = (options: ReportOptions) => {
@@ -140,7 +148,7 @@ export default function OperationsPage() {
             });
         }
         setSelections(newSelections);
-        sessionStorage.setItem('selections', JSON.stringify(Array.from(newSelections.entries())));
+        sessionStorage.setItem(getStorageKey('selections'), JSON.stringify(Array.from(newSelections.entries())));
 
         setModalOpen(true);
 

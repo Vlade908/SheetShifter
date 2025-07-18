@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useTransition, useRef } from "react";
+import React, { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import * as XLSX from 'xlsx';
 import type { DataType, SelectionWithValidation, SpreadsheetData, Worksheet, Column, SavedSpreadsheetConfig } from "@/types";
@@ -113,7 +113,7 @@ function extractColumns(data: any[][], headerRow: number): Column[] {
 }
 
 
-export default function SheetSifterApp() {
+export default function SheetSifterApp({ pageKey = 'default' }: { pageKey?: string }) {
   const [step, setStep] = useState<"upload" | "selection">("upload");
   const [spreadsheetData, setSpreadsheetData] = useState<SpreadsheetData[]>([]);
   const [primaryWorksheet, setPrimaryWorksheet] = useState<{ fileName: string, worksheetName: string } | null>(null);
@@ -130,6 +130,8 @@ export default function SheetSifterApp() {
   const [isConfigModalOpen, setConfigModalOpen] = useState(false);
   const isMobile = useIsMobile();
   const dataTypes: DataType[] = ['text', 'number', 'date', 'currency'];
+
+  const getStorageKey = (key: string) => `${pageKey}_${key}`;
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -233,7 +235,9 @@ export default function SheetSifterApp() {
     setSelections(new Map());
     setPrimaryWorksheet(null);
     setActiveFileTab(undefined);
-    sessionStorage.clear();
+    sessionStorage.removeItem(getStorageKey('selections'));
+    sessionStorage.removeItem(getStorageKey('spreadsheetData'));
+    sessionStorage.removeItem(getStorageKey('primaryWorksheet'));
   };
 
   const handleRemoveSpreadsheet = (fileNameToRemove: string) => {
@@ -481,10 +485,10 @@ export default function SheetSifterApp() {
         });
         
         const selectionsToStore = Array.from(validatedSelections.entries());
-        sessionStorage.setItem('selections', JSON.stringify(selectionsToStore));
-        sessionStorage.setItem('spreadsheetData', JSON.stringify(spreadsheetData));
+        sessionStorage.setItem(getStorageKey('selections'), JSON.stringify(selectionsToStore));
+        sessionStorage.setItem(getStorageKey('spreadsheetData'), JSON.stringify(spreadsheetData));
         if(primaryWorksheet) {
-          sessionStorage.setItem('primaryWorksheet', JSON.stringify(primaryWorksheet));
+          sessionStorage.setItem(getStorageKey('primaryWorksheet'), JSON.stringify(primaryWorksheet));
         }
         router.push('/operations');
 

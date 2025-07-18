@@ -17,7 +17,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { AppLogo } from '@/components/icons';
-import { LayoutDashboard, Sheet as SheetIcon, Pencil, Check } from 'lucide-react';
+import { LayoutDashboard, Sheet as SheetIcon, Pencil, Check, Bus } from 'lucide-react';
 import { ThemeToggle } from '../theme-toggle';
 import { cn } from '@/lib/utils';
 import { Input } from './input';
@@ -25,19 +25,31 @@ import { Button } from './button';
 import { Tooltip, TooltipContent, TooltipTrigger } from './tooltip';
 
 
-const EditableMenuItem = () => {
+const EditableMenuItem = ({ 
+    initialLabel, 
+    storageKey, 
+    href, 
+    pathMatcher, 
+    Icon 
+}: { 
+    initialLabel: string, 
+    storageKey: string,
+    href: string,
+    pathMatcher: (pathname: string) => boolean,
+    Icon: React.ElementType 
+}) => {
     const pathname = usePathname();
     const { state: sidebarState } = useSidebar();
-    const [label, setLabel] = useState('Subsidio');
+    const [label, setLabel] = useState(initialLabel);
     const [isEditing, setIsEditing] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        const savedLabel = localStorage.getItem('subsidioMenuItemLabel');
+        const savedLabel = localStorage.getItem(storageKey);
         if (savedLabel) {
             setLabel(savedLabel);
         }
-    }, []);
+    }, [storageKey]);
 
     useEffect(() => {
         if (isEditing && inputRef.current) {
@@ -51,7 +63,7 @@ const EditableMenuItem = () => {
             const newLabel = inputRef.current.value.trim();
             if (newLabel) {
                 setLabel(newLabel);
-                localStorage.setItem('subsidioMenuItemLabel', newLabel);
+                localStorage.setItem(storageKey, newLabel);
             }
         }
         setIsEditing(false);
@@ -73,12 +85,12 @@ const EditableMenuItem = () => {
             <div className={cn("group/editable-item flex items-center w-full relative", isExpanded && "pr-2")}>
                 <SidebarMenuButton
                     asChild
-                    isActive={pathname === '/' || pathname.startsWith('/operations')}
+                    isActive={pathMatcher(pathname)}
                     tooltip={label}
                     className="flex-grow"
                 >
-                    <Link href="/">
-                        <SheetIcon />
+                    <Link href={href}>
+                        <Icon />
                         {isExpanded && !isEditing && <span className="group-data-[state=collapsed]:hidden flex-grow text-left">{label}</span>}
                     </Link>
                 </SidebarMenuButton>
@@ -147,7 +159,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                <EditableMenuItem />
+                <EditableMenuItem
+                    initialLabel="Subsidio"
+                    storageKey="subsidioMenuItemLabel"
+                    href="/"
+                    pathMatcher={(path) => path === '/' || path.startsWith('/operations')}
+                    Icon={SheetIcon}
+                />
+                <EditableMenuItem
+                    initialLabel="Passe"
+                    storageKey="passeMenuItemLabel"
+                    href="/passe"
+                    pathMatcher={(path) => path.startsWith('/passe')}
+                    Icon={Bus}
+                />
               </SidebarMenu>
             </SidebarContent>
             <SidebarFooter>
