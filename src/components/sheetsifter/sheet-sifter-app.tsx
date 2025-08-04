@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { loadConfig, saveConfig, getRecentFiles, addRecentFile } from '@/lib/config-storage';
 import { parseCurrency } from "@/lib/utils";
 import { ApplyConfigDialog } from '@/components/sheetsifter/apply-config-dialog';
+import { Tour, type TourStep } from '@/components/sheetsifter/tour';
 import { useIsMobile } from "@/hooks/use-mobile";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -133,6 +134,55 @@ export default function SheetSifterApp({ pageKey = 'default' }: { pageKey?: stri
   const dataTypes: DataType[] = ['text', 'number', 'date', 'currency'];
 
   const getStorageKey = (key: string) => `${pageKey}_${key}`;
+
+  const TOUR_STORAGE_KEY = 'sheetsifter-tour-completed';
+
+  const [isTourActive, setIsTourActive] = useState(false);
+
+  const tourSteps: TourStep[] = [
+    {
+      target: '[data-tour="upload-card"]',
+      content: "Bem-vindo! Para começar, envie uma ou mais planilhas clicando aqui.",
+    },
+    {
+      target: '[data-tour="file-tabs"]',
+      content: "Suas planilhas aparecerão aqui em abas. Você pode alternar entre elas.",
+    },
+    {
+      target: '[data-tour="worksheet-tabs"]',
+      content: "Dentro de cada arquivo, você pode navegar entre as diferentes planilhas aqui.",
+    },
+     {
+      target: '[data-tour="header-row-input"]',
+      content: "Ajuste este número para corresponder à linha onde os títulos das suas colunas estão. O padrão é a linha 2.",
+    },
+    {
+      target: '[data-tour="columns-table"]',
+      content: "Aqui está a lista de colunas da sua planilha. Marque as caixas de seleção para as colunas que você deseja analisar.",
+    },
+    {
+      target: '[data-tour="column-options"]',
+      content: "Para cada coluna selecionada, você pode definir o tipo de dado (Texto, Número, etc.) e um papel (Chave, Valor, CPF) para usar nas operações.",
+    },
+    {
+      target: '[data-tour="proceed-button"]',
+      content: "Quando terminar de selecionar e configurar, clique aqui para validar seus dados e ir para a tela de operações!",
+    },
+  ];
+
+  useEffect(() => {
+    if (pageKey === 'subsidio') {
+      const tourCompleted = localStorage.getItem(TOUR_STORAGE_KEY);
+      if (!tourCompleted) {
+        setIsTourActive(true);
+      }
+    }
+  }, [pageKey]);
+  
+  const handleCompleteTour = () => {
+    localStorage.setItem(TOUR_STORAGE_KEY, 'true');
+    setIsTourActive(false);
+  };
 
   useEffect(() => {
     if (step === 'upload') {
@@ -544,6 +594,11 @@ export default function SheetSifterApp({ pageKey = 'default' }: { pageKey?: stri
 
   return (
     <TooltipProvider>
+      <Tour
+        steps={tourSteps}
+        isOpen={isTourActive}
+        onClose={handleCompleteTour}
+      />
       <input
         type="file"
         ref={fileInputRef}
@@ -557,7 +612,7 @@ export default function SheetSifterApp({ pageKey = 'default' }: { pageKey?: stri
         {renderHeader()}
         {step === 'upload' ? (
           <main className="flex-grow flex items-center justify-center p-4">
-            <Card className="w-full max-w-lg text-center shadow-lg">
+            <Card data-tour="upload-card" className="w-full max-w-lg text-center shadow-lg">
                 <CardHeader>
                     <div className="mx-auto bg-primary/10 rounded-full p-4 w-fit mb-4">
                         <UploadCloud className="h-12 w-12 text-primary" />
@@ -610,7 +665,7 @@ export default function SheetSifterApp({ pageKey = 'default' }: { pageKey?: stri
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
-                <Tabs value={activeFileTab} onValueChange={setActiveFileTab} className="w-full">
+                <Tabs value={activeFileTab} onValueChange={setActiveFileTab} className="w-full" data-tour="file-tabs">
                   <ScrollArea className="w-full">
                       <TabsList>
                           {spreadsheetData.map((file) => (
@@ -651,7 +706,7 @@ export default function SheetSifterApp({ pageKey = 'default' }: { pageKey?: stri
                               </TooltipTrigger>
                               <TooltipContent>
                                   <p>Adicionar novo arquivo</p>
-                              </TooltipContent>
+                               </TooltipContent>
                           </Tooltip>
                       </TabsList>
                       <ScrollBar orientation="horizontal" />
@@ -659,7 +714,7 @@ export default function SheetSifterApp({ pageKey = 'default' }: { pageKey?: stri
 
                   {spreadsheetData.map((file) => (
                       <TabsContent value={file.fileName} key={file.fileName} className="mt-4 border-t pt-4">
-                          <Tabs defaultValue={file.worksheets[0]?.name} className="w-full">
+                          <Tabs defaultValue={file.worksheets[0]?.name} className="w-full" data-tour="worksheet-tabs">
                               <ScrollArea className="w-full">
                               <TabsList>
                                   {file.worksheets.map((worksheet) => {
@@ -705,7 +760,7 @@ export default function SheetSifterApp({ pageKey = 'default' }: { pageKey?: stri
                                 return (
                                   <TabsContent value={worksheet.name} key={worksheet.name} className="mt-4">
                                       <div className="flex flex-col md:flex-row items-center justify-between gap-4 my-4">
-                                      <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg w-full md:w-auto flex-grow">
+                                      <div data-tour="header-row-input" className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg w-full md:w-auto flex-grow">
                                           <Label htmlFor={`header-row-${file.fileName}-${worksheet.name}`} className="text-sm font-medium shrink-0">
                                           Linha do Cabeçalho
                                           </Label>
@@ -735,7 +790,7 @@ export default function SheetSifterApp({ pageKey = 'default' }: { pageKey?: stri
                                           Nenhuma coluna corresponde à sua busca.
                                         </div>
                                       ) : isMobile ? (
-                                        <div className="space-y-3">
+                                        <div className="space-y-3" data-tour="columns-table">
                                           {displayedColumns.map(({ column, originalIndex }, index) => {
                                             const key = `${file.fileName}-${worksheet.name}-${originalIndex}`;
                                             const selection = selections.get(key);
@@ -753,7 +808,7 @@ export default function SheetSifterApp({ pageKey = 'default' }: { pageKey?: stri
                                                       checked={!!selection}
                                                       onCheckedChange={(checked) => handleToggleSelection(file.fileName, worksheet.name, column, originalIndex, !!checked)}
                                                     />
-                                                    <div className="flex-1 space-y-3">
+                                                    <div className="flex-1 space-y-3" data-tour={index === 0 ? 'column-options' : undefined}>
                                                       <Label htmlFor={`check-${key}`} className="font-semibold text-base">{column.name}</Label>
                                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                         <div>
@@ -794,7 +849,7 @@ export default function SheetSifterApp({ pageKey = 'default' }: { pageKey?: stri
                                           })}
                                         </div>
                                       ) : (
-                                        <div className="border rounded-md">
+                                        <div className="border rounded-md" data-tour="columns-table">
                                           <ScrollArea className="w-full">
                                             <Table>
                                               <TableHeader>
@@ -816,7 +871,7 @@ export default function SheetSifterApp({ pageKey = 'default' }: { pageKey?: stri
                                                       {isFirstUnselected && selectedColumns.length > 0 && unselectedColumns.length > 0 && (
                                                         <TableRow className="hover:bg-transparent"><TableCell colSpan={5} className="py-2 px-0"><Separator /></TableCell></TableRow>
                                                       )}
-                                                      <TableRow className={selection ? 'bg-primary/5' : ''}>
+                                                      <TableRow className={selection ? 'bg-primary/5' : ''} data-tour={index === 0 ? 'column-options' : undefined}>
                                                         <TableCell>
                                                           <Checkbox checked={!!selection} onCheckedChange={(checked) => handleToggleSelection(file.fileName, worksheet.name, column, originalIndex, !!checked)} />
                                                         </TableCell>
@@ -878,7 +933,7 @@ export default function SheetSifterApp({ pageKey = 'default' }: { pageKey?: stri
                     <Save className="mr-2 h-4 w-4" />
                     Salvar Configuração
                   </Button>
-                  <Button className="w-full sm:w-auto" size="lg" onClick={handleValidateAndProceed} disabled={isPending || selections.size === 0}>
+                  <Button data-tour="proceed-button" className="w-full sm:w-auto" size="lg" onClick={handleValidateAndProceed} disabled={isPending || selections.size === 0}>
                     {isPending ? (
                       <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
