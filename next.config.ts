@@ -1,13 +1,14 @@
+
 import type {NextConfig} from 'next';
 
 const cspHeader = `
     default-src 'self';
-    script-src 'self' 'unsafe-eval' 'unsafe-inline';
+    script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.google.com https://*.googleapis.com;
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
     font-src 'self' https://fonts.gstatic.com;
-    img-src 'self' data: https://placehold.co;
-    connect-src 'self';
-    frame-ancestors 'self';
+    img-src 'self' data: https://placehold.co https://*.google.com https://*.googleusercontent.com;
+    connect-src 'self' https://*.google.com https://*.googleapis.com wss://*.firebaseio.com;
+    frame-src 'self' https://*.google.com https://*.firebaseapp.com;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
@@ -59,6 +60,10 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: '*.googleusercontent.com',
+      }
     ],
   },
 };

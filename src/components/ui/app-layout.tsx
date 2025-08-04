@@ -25,7 +25,7 @@ import { Input } from './input';
 import { Button } from './button';
 import { Tooltip, TooltipContent, TooltipTrigger } from './tooltip';
 import { useAuth } from '@/context/auth-context';
-import { Avatar, AvatarFallback, AvatarImage } from './avatar';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './dropdown-menu';
 
 
@@ -188,7 +188,6 @@ const UserProfile = () => {
 export function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
 
-    // Do not render layout on login page
     if (pathname === '/login') {
         return <>{children}</>;
     }
