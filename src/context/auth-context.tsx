@@ -4,7 +4,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
-import Loading from '@/app/loading';
 
 interface AuthContextType {
   user: User | null;
@@ -43,10 +42,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Error during sign-out:", error);
     }
   };
-
-  if (loading) {
-    return <Loading />;
-  }
 
   return (
     <AuthContext.Provider value={{ user, loading, login, logout }}>
