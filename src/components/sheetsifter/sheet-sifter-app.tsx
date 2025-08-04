@@ -234,14 +234,15 @@ export default function SheetSifterApp({ pageKey = 'default' }: { pageKey?: stri
   };
   
   const handleRecentFileClick = (fileName: string) => {
-    handleUploadClick();
     const config = loadConfig(fileName);
     if(config) {
         setFoundConfig(config);
         setConfigModalOpen(true);
+        toast({ title: "Configuração Encontrada", description: `Envie o arquivo "${fileName}" para aplicar a configuração salva.`});
     } else {
         toast({ title: "Nenhuma configuração salva", description: `Nenhuma configuração foi encontrada para ${fileName}. Faça o upload do arquivo para começar.`});
     }
+    handleUploadClick();
   }
 
   const handleUploadClick = () => {
@@ -578,10 +579,15 @@ export default function SheetSifterApp({ pageKey = 'default' }: { pageKey?: stri
                 </CardContent>
                 {recentFiles.length > 0 && (
                   <CardFooter className="flex-col items-start gap-3 pt-6 border-t">
-                    <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                      <History className="h-4 w-4" />
-                      Usados Recentemente
-                    </h4>
+                    <div className="w-full">
+                      <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-2">
+                        <History className="h-4 w-4" />
+                        Usados Recentemente
+                      </h4>
+                      <p className="text-xs text-muted-foreground text-left">
+                        Por segurança, o navegador não nos permite reabrir arquivos. Clique em um arquivo recente para carregar sua configuração salva e, em seguida, envie o arquivo correspondente.
+                      </p>
+                    </div>
                     <div className="w-full space-y-2">
                         {recentFiles.map(file => (
                             <button key={file} onClick={() => handleRecentFileClick(file)} className="w-full text-left p-2 rounded-md hover:bg-muted text-sm truncate">

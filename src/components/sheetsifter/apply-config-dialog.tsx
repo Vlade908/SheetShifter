@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -22,14 +23,14 @@ export function ApplyConfigDialog({ isOpen, onOpenChange, onConfirm, fileName }:
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Configuração Encontrada</DialogTitle>
+          <DialogTitle>Aplicar Configuração Salva?</DialogTitle>
           <DialogDescription>
-            Encontramos uma configuração salva para o arquivo <span className="font-semibold">{fileName}</span>. Deseja aplicá-la?
+            Encontramos uma configuração salva para o arquivo <span className="font-semibold">{fileName}</span>. Para aplicá-la, envie o arquivo selecionado.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Não</Button>
-          <Button onClick={handleConfirm}>Sim, Aplicar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={handleConfirm}>Ok, Entendi</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
