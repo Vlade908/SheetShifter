@@ -8,13 +8,13 @@ import type { DataType, SelectionWithValidation, SpreadsheetData, Worksheet, Col
 import { validateSelectionsAction, type ValidationRequest } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { loadConfig, saveConfig } from '@/lib/config-storage';
+import { loadConfig, saveConfig, getRecentFiles, addRecentFile } from '@/lib/config-storage';
 import { parseCurrency } from "@/lib/utils";
 import { ApplyConfigDialog } from '@/components/sheetsifter/apply-config-dialog';
 import { useIsMobile } from "@/hooks/use-mobile";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,7 +28,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
 import { DataTypeIcon } from "@/components/data-type-icon";
-import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search, User, Fingerprint, CircleDollarSign, Star, FileText, Save, Plus, X, Menu } from "lucide-react";
+import { UploadCloud, Sheet, LoaderCircle, CheckCircle2, XCircle, ArrowRight, RefreshCw, Search, User, Fingerprint, CircleDollarSign, Star, FileText, Save, Plus, X, History } from "lucide-react";
 
 function detectDataType(samples: string[]): DataType {
   if (samples.length === 0) return 'text';
@@ -128,10 +128,17 @@ export default function SheetSifterApp({ pageKey = 'default' }: { pageKey?: stri
   
   const [foundConfig, setFoundConfig] = useState<SavedSpreadsheetConfig | null>(null);
   const [isConfigModalOpen, setConfigModalOpen] = useState(false);
+  const [recentFiles, setRecentFiles] = useState<string[]>([]);
   const isMobile = useIsMobile();
   const dataTypes: DataType[] = ['text', 'number', 'date', 'currency'];
 
   const getStorageKey = (key: string) => `${pageKey}_${key}`;
+
+  useEffect(() => {
+    if (step === 'upload') {
+      setRecentFiles(getRecentFiles());
+    }
+  }, [step]);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -203,6 +210,7 @@ export default function SheetSifterApp({ pageKey = 'default' }: { pageKey?: stri
 
             const firstNewFile = newSpreadsheetData[0];
             if (firstNewFile) {
+                addRecentFile(firstNewFile.fileName);
                 const config = loadConfig(firstNewFile.fileName);
                 if (config) {
                     setFoundConfig(config);
@@ -224,6 +232,17 @@ export default function SheetSifterApp({ pageKey = 'default' }: { pageKey?: stri
         }
     }, 50);
   };
+  
+  const handleRecentFileClick = (fileName: string) => {
+    handleUploadClick();
+    const config = loadConfig(fileName);
+    if(config) {
+        setFoundConfig(config);
+        setConfigModalOpen(true);
+    } else {
+        toast({ title: "Nenhuma configuração salva", description: `Nenhuma configuração foi encontrada para ${fileName}. Faça o upload do arquivo para começar.`});
+    }
+  }
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -490,7 +509,7 @@ export default function SheetSifterApp({ pageKey = 'default' }: { pageKey?: stri
         if(primaryWorksheet) {
           sessionStorage.setItem(getStorageKey('primaryWorksheet'), JSON.stringify(primaryWorksheet));
         }
-        router.push('/operations');
+        router.push(pageKey === 'passe' ? '/passe/operations' : '/operations');
 
       } catch (error) {
         toast({
@@ -557,6 +576,22 @@ export default function SheetSifterApp({ pageKey = 'default' }: { pageKey?: stri
                         )}
                     </Button>
                 </CardContent>
+                {recentFiles.length > 0 && (
+                  <CardFooter className="flex-col items-start gap-3 pt-6 border-t">
+                    <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                      <History className="h-4 w-4" />
+                      Usados Recentemente
+                    </h4>
+                    <div className="w-full space-y-2">
+                        {recentFiles.map(file => (
+                            <button key={file} onClick={() => handleRecentFileClick(file)} className="w-full text-left p-2 rounded-md hover:bg-muted text-sm truncate">
+                                <FileText className="inline-block mr-2 h-4 w-4" />
+                                {file}
+                            </button>
+                        ))}
+                    </div>
+                  </CardFooter>
+                )}
             </Card>
           </main>
         ) : (

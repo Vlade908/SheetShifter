@@ -74,7 +74,7 @@ export default function OperationsPage() {
   const [existingPaymentFile, setExistingPaymentFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const pageKey = searchParams.get('pageKey') || 'default';
+  const pageKey = searchParams.get('pageKey') || 'passe';
   const getStorageKey = (key: string) => `${pageKey}_${key}`;
   const baseRoute = pageKey === 'passe' ? '/passe' : '/';
 
