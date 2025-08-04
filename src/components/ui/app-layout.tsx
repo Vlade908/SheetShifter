@@ -147,41 +147,36 @@ const UserProfile = () => {
 
     if (!isExpanded) {
         return (
-            <div className="w-full flex flex-col items-center gap-2">
+            <DropdownMenu>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                         <Avatar className="h-8 w-8">
-                            <AvatarImage src={user.photoURL ?? undefined} alt={user.displayName ?? 'User Avatar'} />
-                            <AvatarFallback>{fallback.toUpperCase()}</AvatarFallback>
-                        </Avatar>
+                        <DropdownMenuTrigger asChild>
+                            <Avatar className="h-8 w-8 cursor-pointer">
+                                <AvatarImage src={user.photoURL ?? undefined} alt={user.displayName ?? 'User Avatar'} />
+                                <AvatarFallback>{fallback.toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                        </DropdownMenuTrigger>
                     </TooltipTrigger>
                     <TooltipContent side="right" align="center">
                         <p>{user.displayName ?? user.email}</p>
                     </TooltipContent>
                 </Tooltip>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent side="right" align="center" className="w-56">
-                        <div className="p-2">
-                            <ThemeToggle />
-                        </div>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={logout}>
-                            <LogOut className="mr-2 h-4 w-4" />
-                            <span>Sair</span>
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
+                <DropdownMenuContent side="right" align="center" className="w-56">
+                    <div className="p-2">
+                        <ThemeToggle />
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={logout}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Sair</span>
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
         )
     }
 
     return (
-      <div className="w-full flex items-center gap-2 p-2">
+        <div className="w-full flex items-center gap-2 p-2 border rounded-md">
             <Avatar className="h-8 w-8">
                 <AvatarImage src={user.photoURL ?? undefined} alt={user.displayName ?? 'User Avatar'} />
                 <AvatarFallback>{fallback.toUpperCase()}</AvatarFallback>
@@ -194,7 +189,7 @@ const UserProfile = () => {
                         <MoreVertical />
                     </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent side="right" align="start" className="w-56">
+                <DropdownMenuContent side="top" align="end" className="w-56">
                     <div className="p-2">
                       <ThemeToggle />
                     </div>
