@@ -1,8 +1,12 @@
+
+'use client';
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DollarSign, FileText, Users, Upload, CheckSquare, Settings, Download } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import withAuth from "@/components/with-auth";
 
-export default function DashboardPage() {
+function DashboardPage() {
   return (
     <div className="flex flex-col h-full w-full">
       <header className="flex items-center justify-between p-4 border-b shrink-0">
@@ -107,3 +111,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+export default withAuth(DashboardPage);

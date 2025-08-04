@@ -1,7 +1,13 @@
-import SheetSifterApp from "@/components/sheetsifter/sheet-sifter-app";
 
-export default function Home() {
+'use client';
+
+import SheetSifterApp from "@/components/sheetsifter/sheet-sifter-app";
+import withAuth from "@/components/with-auth";
+
+function HomePage() {
   return (
-    <SheetSifterApp />
+    <SheetSifterApp pageKey="subsidio"/>
   );
 }
+
+export default withAuth(HomePage);

@@ -1,7 +1,8 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   SidebarProvider,
@@ -17,12 +18,15 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { AppLogo } from '@/components/icons';
-import { LayoutDashboard, Sheet as SheetIcon, Pencil, Check, Bus } from 'lucide-react';
+import { LayoutDashboard, Sheet as SheetIcon, Pencil, Check, Bus, LogOut, MoreVertical } from 'lucide-react';
 import { ThemeToggle } from '../theme-toggle';
 import { cn } from '@/lib/utils';
 import { Input } from './input';
 import { Button } from './button';
 import { Tooltip, TooltipContent, TooltipTrigger } from './tooltip';
+import { useAuth } from '@/context/auth-context';
+import { Avatar, AvatarFallback, AvatarImage } from './avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './dropdown-menu';
 
 
 const EditableMenuItem = ({ 
@@ -132,9 +136,63 @@ const EditableMenuItem = ({
     )
 }
 
+const UserProfile = () => {
+    const { user, logout } = useAuth();
+    const { state: sidebarState } = useSidebar();
+    
+    if (!user) return null;
+
+    const isExpanded = sidebarState === 'expanded';
+    const fallback = user.displayName?.charAt(0) ?? user.email?.charAt(0) ?? '?';
+
+    return (
+        <div className={cn("flex w-full items-center gap-2 p-2", !isExpanded && "justify-center")}>
+            <Avatar className="h-8 w-8">
+                <AvatarImage src={user.photoURL ?? undefined} alt={user.displayName ?? 'User Avatar'} />
+                <AvatarFallback>{fallback.toUpperCase()}</AvatarFallback>
+            </Avatar>
+            {isExpanded && <span className="text-sm font-medium truncate">{user.displayName ?? user.email}</span>}
+            
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className={cn("h-8 w-8", !isExpanded && "hidden")}>
+                        <MoreVertical />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="right" align="start">
+                    <DropdownMenuItem onClick={logout}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Sair</span>
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Tooltip for logout on collapsed sidebar */}
+            {!isExpanded && (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={logout}>
+                            <LogOut />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" align="center">
+                        <p>Sair</p>
+                    </TooltipContent>
+                </Tooltip>
+            )}
+        </div>
+    )
+}
+
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
+    const { user } = useAuth();
+
+    // Do not render layout on login page
+    if (pathname === '/login') {
+        return <>{children}</>;
+    }
 
     return (
         <SidebarProvider>
@@ -150,7 +208,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname.startsWith('/dashboard')}
+                    isActive={pathname === '/dashboard'}
                     tooltip="Dashboard"
                   >
                     <Link href="/dashboard">
@@ -176,6 +234,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </SidebarMenu>
             </SidebarContent>
             <SidebarFooter>
+                <UserProfile />
                 <ThemeToggle />
             </SidebarFooter>
             <SidebarRail />
