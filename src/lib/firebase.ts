@@ -1,6 +1,8 @@
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+'use client';
+
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { getAuth, GoogleAuthProvider, Auth } from 'firebase/auth';
 
 const firebaseConfig = {
   "projectId": "sheetsifter",
@@ -11,9 +13,15 @@ const firebaseConfig = {
   "messagingSenderId": "194173945157"
 };
 
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+// Initialize Firebase
+let app: FirebaseApp;
+if (!getApps().length) {
+  app = initializeApp(firebaseConfig);
+} else {
+  app = getApp();
+}
 
-const auth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
+const auth: Auth = getAuth(app);
+const googleProvider: GoogleAuthProvider = new GoogleAuthProvider();
 
 export { app, auth, googleProvider };
