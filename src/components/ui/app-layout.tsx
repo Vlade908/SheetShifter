@@ -26,7 +26,7 @@ import { Button } from './button';
 import { Tooltip, TooltipContent, TooltipTrigger } from './tooltip';
 import { useAuth } from '@/context/auth-context';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from './dropdown-menu';
 
 
 const EditableMenuItem = ({ 
@@ -145,46 +145,48 @@ const UserProfile = () => {
     const isExpanded = sidebarState === 'expanded';
     const fallback = user.displayName?.charAt(0) ?? user.email?.charAt(0) ?? '?';
 
+    if (!isExpanded) {
+        return (
+            <div className="w-full flex flex-col items-center gap-2">
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={logout}>
+                            <LogOut />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" align="center">
+                        <p>Sair</p>
+                    </TooltipContent>
+                </Tooltip>
+            </div>
+        )
+    }
+
     return (
-      <div className="w-full flex flex-col items-center gap-2">
-        <div className={cn("flex w-full items-center gap-2 p-2", !isExpanded && "justify-center")}>
+      <div className="w-full flex items-center gap-2 p-2">
             <Avatar className="h-8 w-8">
                 <AvatarImage src={user.photoURL ?? undefined} alt={user.displayName ?? 'User Avatar'} />
                 <AvatarFallback>{fallback.toUpperCase()}</AvatarFallback>
             </Avatar>
-            {isExpanded && <span className="text-sm font-medium truncate">{user.displayName ?? user.email}</span>}
+            <span className="text-sm font-medium truncate flex-grow">{user.displayName ?? user.email}</span>
             
-            <div className="ml-auto">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className={cn("h-8 w-8", !isExpanded && "hidden")}>
-                            <MoreVertical />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent side="right" align="start">
-                        <DropdownMenuItem onClick={logout}>
-                            <LogOut className="mr-2 h-4 w-4" />
-                            <span>Sair</span>
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* Tooltip for logout on collapsed sidebar */}
-                {!isExpanded && (
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={logout}>
-                                <LogOut />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="right" align="center">
-                            <p>Sair</p>
-                        </TooltipContent>
-                    </Tooltip>
-                )}
-            </div>
-        </div>
-        <ThemeToggle />
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="right" align="start" className="w-56">
+                    <div className="p-2">
+                      <ThemeToggle />
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={logout}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Sair</span>
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
       </div>
     )
 }
