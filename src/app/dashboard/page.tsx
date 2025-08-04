@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { DollarSign, FileText, Users } from "lucide-react";
+import { DollarSign, FileText, Users, Upload, CheckSquare, Settings, Download } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
 export default function DashboardPage() {
@@ -60,13 +60,47 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle>Bem-vindo ao SheetSifter!</CardTitle>
             <CardDescription>
-              Esta é a sua central de controle para análise de planilhas.
+              Esta é a sua central de controle para análise de planilhas. Siga os passos abaixo para começar.
             </CardDescription>
           </CardHeader>
           <CardContent>
-              <p className="text-muted-foreground">
-                  Use o menu lateral para navegar. Comece enviando suas planilhas na seção "Planilhas" para analisar, validar e comparar seus dados.
-              </p>
+              <ol className="space-y-4">
+                <li className="flex items-start gap-4">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-bold">1</div>
+                  <div>
+                    <h4 className="font-semibold">Envie suas Planilhas</h4>
+                    <p className="text-muted-foreground text-sm">Vá para a seção "Subsidio" ou "Passe" no menu lateral e envie uma ou mais planilhas. O sistema as processará automaticamente.</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-4">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-bold">2</div>
+                  <div>
+                    <h4 className="font-semibold">Selecione e Configure as Colunas</h4>
+                    <p className="text-muted-foreground text-sm">Marque as caixas de seleção das colunas que deseja analisar. Se necessário, defina um papel para elas (Chave, Valor, CPF). Você também pode ajustar o tipo de dado detectado.</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-4">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-bold">3</div>
+                  <div>
+                    <h4 className="font-semibold">Valide e Prossiga</h4>
+                    <p className="text-muted-foreground text-sm">Clique em "Validar e Prosseguir". O sistema verificará a compatibilidade dos dados e o levará para a tela de operações.</p>
+                  </div>
+                </li>
+                 <li className="flex items-start gap-4">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-bold">4</div>
+                  <div>
+                    <h4 className="font-semibold">Escolha uma Operação</h4>
+                    <p className="text-muted-foreground text-sm">Na tela de operações, escolha o que você quer fazer: gerar um relatório de comparação, corrigir planilhas com base em uma principal, ou gerar uma planilha de pagamento.</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-4">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-bold">5</div>
+                  <div>
+                    <h4 className="font-semibold">Execute e Baixe</h4>
+                    <p className="text-muted-foreground text-sm">Defina qualquer filtro necessário, clique em "Executar Operação" e, em seguida, visualize os resultados ou baixe seus arquivos corrigidos/gerados.</p>
+                  </div>
+                </li>
+              </ol>
           </CardContent>
         </Card>
       </main>
