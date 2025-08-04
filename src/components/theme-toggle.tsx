@@ -13,6 +13,17 @@ import {
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    // Render a placeholder or null on the server to avoid hydration mismatch
+    return null
+  }
+
 
   const buttons = [
     { name: 'Light', theme: 'light', icon: Sun },

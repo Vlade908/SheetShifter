@@ -146,6 +146,7 @@ const UserProfile = () => {
     const fallback = user.displayName?.charAt(0) ?? user.email?.charAt(0) ?? '?';
 
     return (
+      <div className="w-full">
         <div className={cn("flex w-full items-center gap-2 p-2", !isExpanded && "justify-center")}>
             <Avatar className="h-8 w-8">
                 <AvatarImage src={user.photoURL ?? undefined} alt={user.displayName ?? 'User Avatar'} />
@@ -181,6 +182,8 @@ const UserProfile = () => {
                 </Tooltip>
             )}
         </div>
+        <ThemeToggle />
+      </div>
     )
 }
 
@@ -233,7 +236,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </SidebarContent>
             <SidebarFooter>
                 <UserProfile />
-                <ThemeToggle />
             </SidebarFooter>
             <SidebarRail />
           </Sidebar>
