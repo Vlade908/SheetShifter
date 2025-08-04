@@ -187,7 +187,6 @@ const UserProfile = () => {
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    const { user } = useAuth();
 
     // Do not render layout on login page
     if (pathname === '/login') {
