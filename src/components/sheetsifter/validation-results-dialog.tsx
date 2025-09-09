@@ -31,13 +31,14 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
 
   const formatValue = (value: string | undefined | null, dataType: DataType | undefined): string => {
-    if (dataType !== 'currency' || value === null || value === undefined || String(value).trim() === '') {
-      return value || '';
+    if (value === null || value === undefined || String(value).trim() === '') {
+      return '';
     }
     const numericValue = parseCurrency(value);
     if (isNaN(numericValue) || !isFinite(numericValue)) {
       return value;
     }
+    // Always format as currency if it's a valid number, as requested
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
@@ -114,7 +115,18 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                 <ScrollBar orientation="horizontal"/>
             </ScrollArea>
             
-            {reports.map(report => (
+            {reports.map(report => {
+              const totalToSpend = report.results.reduce((acc, row) => {
+                  if (row.sourceValue !== undefined) {
+                      const numericValue = parseCurrency(row.sourceValue);
+                      if (!isNaN(numericValue)) {
+                          return acc + numericValue;
+                      }
+                  }
+                  return acc;
+              }, 0);
+
+              return (
               <TabsContent key={report.key} value={report.key} className="flex-1 overflow-y-auto mt-4 pr-1">
                  <div className="pr-4">
                     <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-4 p-4 border rounded-lg bg-secondary/50">
@@ -127,6 +139,9 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                           {report.summary.duplicateKeys > 0 && (
                             <p className="font-semibold text-orange-600 dark:text-orange-500"><strong>Alunos Duplicados:</strong> {report.summary.duplicateKeys}</p>
                           )}
+                           <p className="font-bold text-primary text-base pt-2">
+                            <strong>Total a ser Gasto:</strong> {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalToSpend)}
+                           </p>
                         </div>
                         <div className="w-full md:w-auto flex-shrink-0">
                             <Button
@@ -208,7 +223,7 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                     </Tabs>
                  </div>
               </TabsContent>
-            ))}
+            )})}
           </Tabs>
         ) : (
           <div className="flex-grow flex items-center justify-center">
