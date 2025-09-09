@@ -5,7 +5,7 @@ import type { DetailedReport, Selection, SpreadsheetData, DataType } from '@/typ
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, XCircle, Download, LoaderCircle } from 'lucide-react';
@@ -30,15 +30,14 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
   const [isDownloading, startDownloading] = useTransition();
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
 
-  const formatValue = (value: string | undefined | null, dataType: DataType | undefined): string => {
+  const formatValue = (value: string | number | undefined | null, dataType: DataType | undefined): string => {
     if (value === null || value === undefined || String(value).trim() === '') {
       return '';
     }
-    const numericValue = parseCurrency(value);
+    const numericValue = typeof value === 'number' ? value : parseCurrency(String(value));
     if (isNaN(numericValue) || !isFinite(numericValue)) {
-      return value;
+      return String(value);
     }
-    // Always format as currency if it's a valid number, as requested
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
@@ -126,6 +125,24 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                   return acc;
               }, 0);
 
+              const sourceValueTotal = report.results.reduce((acc, row) => {
+                if (row.sourceValue !== undefined) {
+                    const numericValue = parseCurrency(row.sourceValue);
+                    if (!isNaN(numericValue)) {
+                        return acc + numericValue;
+                    }
+                }
+                return acc;
+              }, 0);
+
+              const targetValueTotal = report.results.reduce((acc, row) => {
+                const numericValue = parseCurrency(row.value);
+                if (!isNaN(numericValue)) {
+                    return acc + numericValue;
+                }
+                return acc;
+              }, 0);
+
               return (
               <TabsContent key={report.key} value={report.key} className="flex-1 overflow-y-auto mt-4 pr-1">
                  <div className="pr-4">
@@ -140,7 +157,7 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                             <p className="font-semibold text-orange-600 dark:text-orange-500"><strong>Alunos Duplicados:</strong> {report.summary.duplicateKeys}</p>
                           )}
                            <p className="font-bold text-primary text-base pt-2">
-                            <strong>Total a ser Gasto:</strong> {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalToSpend)}
+                            <strong>Total a ser Gasto (Planilha Principal):</strong> {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalToSpend)}
                            </p>
                         </div>
                         <div className="w-full md:w-auto flex-shrink-0">
@@ -200,6 +217,14 @@ export function ValidationResultsDialog({ isOpen, onOpenChange, reports, spreads
                                     </TableRow>
                                 ))}
                                 </TableBody>
+                                <TableFooter>
+                                    <TableRow>
+                                        <TableCell colSpan={report.sourceKeyColumnName ? 2 : 1} className="font-bold">Total</TableCell>
+                                        <TableCell className="font-mono text-xs font-bold">{formatValue(sourceValueTotal, report.sourceValueDataType)}</TableCell>
+                                        <TableCell className="font-mono text-xs font-bold">{formatValue(targetValueTotal, report.valueDataType)}</TableCell>
+                                        <TableCell></TableCell>
+                                    </TableRow>
+                                </TableFooter>
                             </Table>
                         </TabsContent>
                         {report.duplicateKeyList && report.duplicateKeyList.length > 0 && (
